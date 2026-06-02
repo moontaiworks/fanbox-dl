@@ -1,0 +1,7 @@
+dist/
+pnpm-*.yaml
+node_modules/
+coverage/
+*.min.js
+examples/
+CHANGELOG.md

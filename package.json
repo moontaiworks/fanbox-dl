@@ -1,0 +1,96 @@
+{
+  "name": "@moontaiworks/fanbox-dl",
+  "version": "0.0.0-development",
+  "description": "A TypeScript PixivFanbox Downloader and SDK",
+  "author": "moontai0724",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/bundle/index.cjs",
+  "module": "./dist/bundle/index.js",
+  "types": "./dist/bundle/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "imports": {
+    "#*": "./src/*",
+    "#tests/*": "./tests/*"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest",
+    "provenance": true
+  },
+  "homepage": "https://moontaiworks.github.io/fanbox-dl/",
+  "bugs": {
+    "url": "https://github.com/moontaiworks/fanbox-dl/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moontaiworks/fanbox-dl.git"
+  },
+  "scripts": {
+    "build": "pnpm run build:bundle && pnpm run build:native",
+    "build:bundle": "tsup",
+    "build:native": "pnpm run build:native:esm && pnpm run build:native:cjs",
+    "build:native:esm": "tsc -p tsconfig.esm.json",
+    "build:native:cjs": "tsc -p tsconfig.cjs.json",
+    "clean": "rm -rf dist",
+    "docs": "typedoc",
+    "docs:clean": "rm -rf docs",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc -p src/tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "env:test": "env $(cat .env.test .env.test.local 2>/dev/null | grep -v '^#' | xargs)",
+    "test": "pnpm env:test vitest run --typecheck",
+    "test:watch": "pnpm env:test vitest --typecheck",
+    "test:ui": "pnpm env:test vitest --ui",
+    "test:coverage": "pnpm env:test vitest run --coverage",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "typescript",
+    "typestrong"
+  ],
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@eslint/js": "^9.39.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@types/node": "^24.10.13",
+    "@typescript-eslint/parser": "^8.57.1",
+    "@vitest/coverage-v8": "^4.1.0",
+    "@vitest/ui": "^4.1.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.2",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "ky": "^1.14.3",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "semantic-release": "^25.0.3",
+    "tsup": "^8.5.1",
+    "typedoc": "^0.28.17",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.1.0"
+  }
+}
