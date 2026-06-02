@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FanboxApiError, FanboxClient } from "./client.js";
+import { FanboxApiError, FanboxClient } from "./index.js";
 
 interface RecordedRequest {
   init?: RequestInit;
