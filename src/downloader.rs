@@ -180,6 +180,15 @@ async fn discover_creator_posts(
             }
         };
         let added = add_posts(page.clone(), &mut found);
+        logger.info(
+            "post.discovery.page",
+            "Post discovery page loaded",
+            serde_json::json!({
+                "creatorId": creator_id,
+                "count": page.len(),
+                "added": added,
+            }),
+        );
         if page.len() < PAGE_SIZE as usize {
             break;
         }
@@ -196,6 +205,11 @@ async fn discover_creator_posts(
         cursor.first_id = Some(last.id.clone());
         cursor.first_published_datetime = Some(last.published_datetime.clone());
     }
+    logger.info(
+        "post.discovery.complete",
+        "Post discovery completed",
+        serde_json::json!({ "creatorId": creator_id, "count": found.len() }),
+    );
     Ok(found.into_values().collect())
 }
 
@@ -309,6 +323,15 @@ async fn sync_post(
         entry.status = PostStatus::Skipped;
         entry.updated_datetime = summary.updated_datetime.clone();
         store.save(manifest).await?;
+        request.logger.info(
+            "post.sync.skipped",
+            "Post sync skipped",
+            serde_json::json!({
+                "creatorId": summary.creator_id,
+                "postId": summary.id,
+                "reason": "restricted",
+            }),
+        );
         return Ok(());
     }
     let cover_changed = entry.assets.get("cover").map(|asset| asset.url.as_str())
@@ -319,6 +342,15 @@ async fn sync_post(
         && (!request.verify_assets || verify_assets(&creator_directory, entry).await?)
     {
         store.save(manifest).await?;
+        request.logger.info(
+            "post.sync.skipped",
+            "Post sync skipped",
+            serde_json::json!({
+                "creatorId": summary.creator_id,
+                "postId": summary.id,
+                "reason": "up-to-date",
+            }),
+        );
         return Ok(());
     }
 
@@ -335,6 +367,17 @@ async fn sync_post(
                     existing.status == AssetStatus::Complete && existing.url == asset.url
                 }) && fs::try_exists(from_posix(&creator_directory, &manifest_path)).await?
                 {
+                    request.logger.info(
+                        "asset.download.skipped",
+                        "Asset download skipped",
+                        serde_json::json!({
+                            "creatorId": summary.creator_id,
+                            "postId": summary.id,
+                            "assetKey": asset.key,
+                            "path": manifest_path,
+                            "reason": "up-to-date",
+                        }),
+                    );
                     continue;
                 }
                 entry.assets.insert(
@@ -365,10 +408,24 @@ async fn sync_post(
                     .expect("asset entry exists");
                 match result {
                     Ok(result) => {
+                        let bytes = result.bytes;
+                        let sha256 = result.sha256.clone();
                         asset_entry.bytes = Some(result.bytes);
                         asset_entry.sha256 = Some(result.sha256);
                         asset_entry.status = AssetStatus::Complete;
                         asset_entry.error = None;
+                        request.logger.info(
+                            "asset.download.complete",
+                            "Asset download completed",
+                            serde_json::json!({
+                                "creatorId": summary.creator_id,
+                                "postId": summary.id,
+                                "assetKey": asset.key,
+                                "path": manifest_path,
+                                "bytes": bytes,
+                                "sha256": sha256,
+                            }),
+                        );
                     }
                     Err(error) => {
                         asset_entry.error = Some(error.to_string());
@@ -398,6 +455,16 @@ async fn sync_post(
             };
             entry.updated_datetime = summary.updated_datetime.clone();
             entry.error = None;
+            request.logger.info(
+                "post.sync.complete",
+                "Post sync completed",
+                serde_json::json!({
+                    "creatorId": summary.creator_id,
+                    "postId": summary.id,
+                    "status": format!("{:?}", entry.status),
+                    "assetCount": entry.assets.len(),
+                }),
+            );
         }
         Err(error) => {
             entry.error = Some(error.to_string());
@@ -694,6 +761,11 @@ async fn set_file_timestamp(path: &Path, timestamp: &str) -> Result<(), std::io:
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client::FanboxClientOptions;
+    use crate::logger::{LogFormat, LogLevel};
+    use std::sync::{Arc, Mutex};
+    use wiremock::matchers::{method, path, query_param};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[test]
     fn add_posts_deduplicates_by_id() {
@@ -724,5 +796,207 @@ mod tests {
         let mut found = BTreeMap::new();
         assert_eq!(add_posts(vec![post.clone(), post], &mut found), 1);
         assert_eq!(found.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn logs_successful_restricted_post_skip() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/post.listCreator"))
+            .and(query_param("creatorId", "creator"))
+            .and(query_param("limit", "300"))
+            .and(query_param("sort", "newest"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "body": [{
+                    "commentCount": 0,
+                    "cover": null,
+                    "creatorId": "creator",
+                    "excerpt": "",
+                    "feeRequired": 0,
+                    "hasAdultContent": false,
+                    "id": "post-1",
+                    "isCommentingRestricted": false,
+                    "isLiked": false,
+                    "isPinned": false,
+                    "isRestricted": true,
+                    "likeCount": 0,
+                    "publishedDatetime": "2026-01-01T00:00:00+09:00",
+                    "tags": [],
+                    "title": "Restricted",
+                    "updatedDatetime": "2026-01-01T00:00:00+09:00",
+                    "user": { "iconUrl": "", "name": "Creator", "userId": "1" }
+                }]
+            })))
+            .mount(&server)
+            .await;
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let sink = lines.clone();
+        let logger = crate::logger::Logger::with_sink(
+            LogFormat::Json,
+            LogLevel::Info,
+            Arc::new(move |line| sink.lock().unwrap().push(line.to_string())),
+        );
+        let scheduler = Arc::new(RequestScheduler::new(1, 0, 0, 0, logger.clone()));
+        let client = FanboxClient::new(FanboxClientOptions {
+            base_url: server.uri(),
+            logger: logger.clone(),
+            scheduler: Some(scheduler.clone()),
+            ..Default::default()
+        });
+        let output = tempfile::tempdir().unwrap();
+
+        let failed = download(DownloadRequest {
+            client,
+            creator_ids: vec!["creator".to_string()],
+            following: false,
+            supporting: false,
+            ignore_creator_ids: vec![],
+            output: output.path().to_path_buf(),
+            dry_run: false,
+            verify_assets: false,
+            scheduler,
+            logger,
+        })
+        .await
+        .unwrap();
+
+        assert!(!failed);
+        let lines = lines.lock().unwrap();
+        let events = lines
+            .iter()
+            .map(|line| serde_json::from_str::<Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        assert!(events.iter().any(|log| {
+            log["event"] == "post.sync.skipped"
+                && log["creatorId"] == "creator"
+                && log["postId"] == "post-1"
+                && log["reason"] == "restricted"
+        }));
+    }
+
+    #[tokio::test]
+    async fn logs_successful_asset_downloads() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/post.listCreator"))
+            .and(query_param("creatorId", "creator"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "body": [{
+                    "commentCount": 0,
+                    "cover": null,
+                    "creatorId": "creator",
+                    "excerpt": "",
+                    "feeRequired": 0,
+                    "hasAdultContent": false,
+                    "id": "post-1",
+                    "isCommentingRestricted": false,
+                    "isLiked": false,
+                    "isPinned": false,
+                    "isRestricted": false,
+                    "likeCount": 0,
+                    "publishedDatetime": "2026-01-01T00:00:00+09:00",
+                    "tags": [],
+                    "title": "Post",
+                    "updatedDatetime": "2026-01-01T00:00:00+09:00",
+                    "user": { "iconUrl": "", "name": "Creator", "userId": "1" }
+                }]
+            })))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/post.info"))
+            .and(query_param("postId", "post-1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "body": {
+                    "body": {
+                        "images": [{
+                            "extension": "jpg",
+                            "height": 1,
+                            "id": "image-1",
+                            "originalUrl": format!("{}/asset.jpg", server.uri()),
+                            "thumbnailUrl": "",
+                            "width": 1
+                        }]
+                    },
+                    "commentCount": 0,
+                    "coverImageUrl": null,
+                    "creatorId": "creator",
+                    "excerpt": "",
+                    "feeRequired": 0,
+                    "hasAdultContent": false,
+                    "id": "post-1",
+                    "imageForShare": null,
+                    "isCommentingRestricted": false,
+                    "isLiked": false,
+                    "isPinned": false,
+                    "isRestricted": false,
+                    "likeCount": 0,
+                    "nextPost": null,
+                    "prevPost": null,
+                    "publishedDatetime": "2026-01-01T00:00:00+09:00",
+                    "tags": [],
+                    "title": "Post",
+                    "type": "image",
+                    "updatedDatetime": "2026-01-01T00:00:00+09:00",
+                    "user": { "iconUrl": "", "name": "Creator", "userId": "1" }
+                }
+            })))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/asset.jpg"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes("image-bytes"))
+            .mount(&server)
+            .await;
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let sink = lines.clone();
+        let logger = crate::logger::Logger::with_sink(
+            LogFormat::Json,
+            LogLevel::Info,
+            Arc::new(move |line| sink.lock().unwrap().push(line.to_string())),
+        );
+        let scheduler = Arc::new(RequestScheduler::new(1, 0, 0, 0, logger.clone()));
+        let client = FanboxClient::new(FanboxClientOptions {
+            base_url: server.uri(),
+            logger: logger.clone(),
+            scheduler: Some(scheduler.clone()),
+            ..Default::default()
+        });
+        let output = tempfile::tempdir().unwrap();
+
+        let failed = download(DownloadRequest {
+            client,
+            creator_ids: vec!["creator".to_string()],
+            following: false,
+            supporting: false,
+            ignore_creator_ids: vec![],
+            output: output.path().to_path_buf(),
+            dry_run: false,
+            verify_assets: false,
+            scheduler,
+            logger,
+        })
+        .await
+        .unwrap();
+
+        assert!(!failed);
+        let lines = lines.lock().unwrap();
+        let events = lines
+            .iter()
+            .map(|line| serde_json::from_str::<Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        assert!(events.iter().any(|log| {
+            log["event"] == "asset.download.complete"
+                && log["creatorId"] == "creator"
+                && log["postId"] == "post-1"
+                && log["assetKey"] == "image:image-1"
+                && log["bytes"] == 11
+        }));
+        assert!(events.iter().any(|log| {
+            log["event"] == "post.sync.complete"
+                && log["creatorId"] == "creator"
+                && log["postId"] == "post-1"
+                && log["status"] == "Complete"
+        }));
     }
 }

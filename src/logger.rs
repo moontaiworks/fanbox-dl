@@ -1,5 +1,8 @@
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::sync::Arc;
+
+type LogSink = Arc<dyn Fn(&str) + Send + Sync>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogFormat {
@@ -15,15 +18,33 @@ pub enum LogLevel {
     Error,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Logger {
     format: LogFormat,
     level: LogLevel,
+    sink: LogSink,
+}
+
+impl std::fmt::Debug for Logger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Logger")
+            .field("format", &self.format)
+            .field("level", &self.level)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Logger {
     pub fn new(format: LogFormat, level: LogLevel) -> Self {
-        Self { format, level }
+        Self::with_sink(format, level, Arc::new(|line| eprintln!("{}", line)))
+    }
+
+    pub fn with_sink(format: LogFormat, level: LogLevel, sink: LogSink) -> Self {
+        Self {
+            format,
+            level,
+            sink,
+        }
     }
 
     pub fn debug(&self, event: &str, msg: &str, data: impl Serialize) {
@@ -56,13 +77,13 @@ impl Logger {
                     "msg": msg,
                 });
                 merge_object(&mut line, data);
-                eprintln!("{}", line);
+                (self.sink)(&line.to_string());
             }
             LogFormat::Pretty => {
                 if data == Value::Object(Default::default()) {
-                    eprintln!("[{}] {}: {}", level.as_str(), event, msg);
+                    (self.sink)(&format!("[{}] {}: {}", level.as_str(), event, msg));
                 } else {
-                    eprintln!("[{}] {}: {} {}", level.as_str(), event, msg, data);
+                    (self.sink)(&format!("[{}] {}: {} {}", level.as_str(), event, msg, data));
                 }
             }
         }
@@ -101,10 +122,36 @@ fn merge_object(target: &mut Value, data: Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn log_levels_order_by_severity() {
         assert!(LogLevel::Debug < LogLevel::Info);
         assert!(LogLevel::Warn < LogLevel::Error);
+    }
+
+    #[test]
+    fn writes_json_logs_to_configured_sink() {
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let sink = lines.clone();
+        let logger = Logger::with_sink(
+            LogFormat::Json,
+            LogLevel::Info,
+            Arc::new(move |line| sink.lock().unwrap().push(line.to_string())),
+        );
+
+        logger.info(
+            "thing.complete",
+            "Thing completed",
+            serde_json::json!({ "id": "123" }),
+        );
+
+        let lines = lines.lock().unwrap();
+        assert_eq!(lines.len(), 1);
+        let line: Value = serde_json::from_str(&lines[0]).unwrap();
+        assert_eq!(line["level"], "info");
+        assert_eq!(line["event"], "thing.complete");
+        assert_eq!(line["msg"], "Thing completed");
+        assert_eq!(line["id"], "123");
     }
 }

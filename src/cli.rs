@@ -162,6 +162,7 @@ async fn run_download(args: DownloadArgs) -> Result<bool, CliError> {
     ));
     let client = FanboxClient::new(FanboxClientOptions {
         cookie,
+        logger: logger.clone(),
         scheduler: Some(scheduler.clone()),
         user_agent: args.user_agent,
         ..Default::default()

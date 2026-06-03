@@ -1,3 +1,4 @@
+use crate::logger::Logger;
 use crate::scheduler::RequestScheduler;
 use crate::types::{
     Creator, CreatorSummary, FanboxEnvelope, Plan, Post, PostSummary, SupportingPlan,
@@ -16,6 +17,7 @@ pub struct FanboxClient {
     base_url: String,
     cookie: Option<String>,
     http: reqwest::Client,
+    logger: Logger,
     scheduler: Option<Arc<RequestScheduler>>,
     user_agent: String,
 }
@@ -24,6 +26,7 @@ pub struct FanboxClient {
 pub struct FanboxClientOptions {
     pub base_url: String,
     pub cookie: Option<String>,
+    pub logger: Logger,
     pub scheduler: Option<Arc<RequestScheduler>>,
     pub user_agent: Option<String>,
 }
@@ -33,6 +36,7 @@ impl Default for FanboxClientOptions {
         Self {
             base_url: DEFAULT_BASE_URL.to_string(),
             cookie: None,
+            logger: Logger::default(),
             scheduler: None,
             user_agent: None,
         }
@@ -67,6 +71,7 @@ impl FanboxClient {
             base_url: options.base_url,
             cookie: options.cookie,
             http: reqwest::Client::new(),
+            logger: options.logger,
             scheduler: options.scheduler,
             user_agent: options
                 .user_agent
@@ -198,6 +203,15 @@ impl FanboxClient {
         }
 
         let envelope: FanboxEnvelope<T> = serde_json::from_value(body)?;
+        self.logger.info(
+            "api.request.complete",
+            "API request completed",
+            serde_json::json!({
+                "path": path,
+                "status": status.as_u16(),
+                "statusText": status_text,
+            }),
+        );
         Ok(envelope.body)
     }
 
@@ -254,6 +268,8 @@ fn random_user_agent_fragment() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::logger::{LogFormat, LogLevel, Logger};
+    use std::sync::{Arc, Mutex};
     use wiremock::matchers::{header, method, path, query_param};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -295,5 +311,55 @@ mod tests {
 
         let creator = client.get_creator("creator").await.unwrap();
         assert_eq!(creator.creator_id, "creator");
+    }
+
+    #[tokio::test]
+    async fn logs_successful_api_requests_at_info_level() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/creator.get"))
+            .and(query_param("creatorId", "creator"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "body": {
+                    "category": "",
+                    "coverImageUrl": null,
+                    "creatorId": "creator",
+                    "description": "",
+                    "hasAdultContent": false,
+                    "hasBoothShop": false,
+                    "hasPublishedPost": true,
+                    "isAcceptingRequest": false,
+                    "isFollowed": true,
+                    "isStopped": false,
+                    "isSupported": false,
+                    "profileItems": [],
+                    "profileLinks": [],
+                    "user": { "iconUrl": "", "name": "Creator", "userId": "1" }
+                }
+            })))
+            .mount(&server)
+            .await;
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let sink = lines.clone();
+        let logger = Logger::with_sink(
+            LogFormat::Json,
+            LogLevel::Info,
+            Arc::new(move |line| sink.lock().unwrap().push(line.to_string())),
+        );
+        let client = FanboxClient::new(FanboxClientOptions {
+            base_url: server.uri(),
+            logger,
+            user_agent: Some("ua".to_string()),
+            ..Default::default()
+        });
+
+        client.get_creator("creator").await.unwrap();
+
+        let lines = lines.lock().unwrap();
+        let log: Value = serde_json::from_str(&lines[0]).unwrap();
+        assert_eq!(log["level"], "info");
+        assert_eq!(log["event"], "api.request.complete");
+        assert_eq!(log["path"], "creator.get");
+        assert_eq!(log["status"], 200);
     }
 }
