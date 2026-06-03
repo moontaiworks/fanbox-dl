@@ -67,6 +67,13 @@ requests when supported, and can verify existing SHA-256 hashes:
 fanbox-dl download --creator creator-id --verify-assets
 ```
 
+Preview the selected creators and discovered post summaries without writing
+files or requesting post details:
+
+```bash
+fanbox-dl download --creator creator-id --dry-run
+```
+
 Authenticated downloads read `FANBOX_SESSION_ID` by default. You can override
 it with `--cookie-file` or `--cookie`. Passing `--cookie` is convenient but may
 leave the session value in shell history.
@@ -83,7 +90,11 @@ fanbox-dl download \
 ```
 
 Logs use JSON Lines by default. Add `--log-format pretty` for interactive use.
-When FANBOX responds with HTTP 429, all new requests pause before retrying.
+Use `--verbose` to include debug logs, including response status and body for
+FANBOX API errors. When FANBOX responds with HTTP 429, all new requests pause
+before retrying.
+
+Run `fanbox-dl --help` for the full CLI option list.
 
 ## Documentation
 
