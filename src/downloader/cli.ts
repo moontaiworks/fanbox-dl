@@ -1,4 +1,5 @@
 import { FanboxClient } from "../client.js";
+import { Http2Transport, type HttpTransport } from "../http.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
@@ -10,7 +11,7 @@ import { RequestScheduler } from "./scheduler.js";
 import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
-  fetch?: typeof globalThis.fetch;
+  transport?: HttpTransport;
   write?: (line: string) => void;
 }
 
@@ -61,6 +62,7 @@ export async function runCli(
   }
 
   let logger: Logger | undefined;
+  let transportToClose: HttpTransport | undefined;
   try {
     const options = parseDownloadOptions(args, env);
     assertPathBudget(options.output);
@@ -69,7 +71,8 @@ export async function runCli(
       level: options.verbose ? "debug" : "info",
       write: dependencies.write,
     });
-    const fetch = dependencies.fetch ?? globalThis.fetch;
+    const transport = dependencies.transport ?? new Http2Transport();
+    transportToClose = dependencies.transport ? undefined : transport;
     const scheduler = new RequestScheduler({
       concurrency: options.concurrency,
       logger,
@@ -79,7 +82,12 @@ export async function runCli(
     });
     const client = new FanboxClient({
       cookie: options.cookie,
-      fetch: (input, init) => scheduler.fetch(input, fetch, init),
+      transport: {
+        close: () => transport.close(),
+        request: (request) =>
+          scheduler.request(() => transport.request(request)),
+      },
+      userAgent: options.userAgent,
     });
     const creatorIds = await resolveCreatorIds(client, options);
     if (options.dryRun) {
@@ -103,7 +111,7 @@ export async function runCli(
       return 0;
     }
 
-    const assetDownloader = new AssetDownloader({ fetch, scheduler });
+    const assetDownloader = new AssetDownloader({ scheduler, transport });
     let failed = false;
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", "Creator sync started", { creatorId });
@@ -150,6 +158,8 @@ export async function runCli(
       );
     }
     return usage ? 2 : 1;
+  } finally {
+    await transportToClose?.close();
   }
 }
 

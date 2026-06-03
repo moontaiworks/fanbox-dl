@@ -1,17 +1,45 @@
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
+import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
 import { runCli } from "./cli.js";
 
-function requestUrl(input: Parameters<typeof globalThis.fetch>[0]): string {
+function headers(input: HttpRequest | string | URL): Headers {
+  if (typeof input === "string" || input instanceof URL) {
+    return new Headers();
+  }
+
+  return new Headers(input.headers);
+}
+
+function requestUrl(input: HttpRequest | string | URL): string {
   return typeof input === "string"
     ? input
     : input instanceof URL
       ? input.href
-      : input.url;
+      : input.url.toString();
+}
+
+function response(
+  body: unknown,
+  init: { status?: number; statusText?: string } = {},
+): HttpResponse {
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  const status = init.status ?? 200;
+
+  return {
+    body: Readable.from([text]),
+    headers: new Headers(),
+    json: () => Promise.resolve(JSON.parse(text) as unknown),
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: init.statusText ?? "",
+    text: () => Promise.resolve(text),
+  };
 }
 
 function summary() {
@@ -57,40 +85,43 @@ describe("runCli", () => {
     ).resolves.toBe(2);
 
     expect(lines.join("\n")).toContain("Usage: fanbox-dl download [options]");
-    expect(lines.join("\n")).toContain("expected the download command");
+    expect(lines.join("\n")).toContain("at least one creator selector");
   });
 
   it("downloads a selected creator with the command entrypoint", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-cli-"));
-    const fetch: typeof globalThis.fetch = (input) => {
-      const url = new URL(requestUrl(input));
-      if (url.pathname.endsWith("/post.listCreator")) {
-        return Promise.resolve(Response.json({ body: [summary()] }));
-      }
-      if (url.pathname.endsWith("/post.info")) {
-        return Promise.resolve(
-          Response.json({
-            body: {
-              ...summary(),
-              body: { text: "Hello" },
-              coverImageUrl: null,
-              imageForShare: null,
-              nextPost: null,
-              prevPost: null,
-              type: "text",
-            },
-          }),
-        );
-      }
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: (input) => {
+        const url = new URL(requestUrl(input));
+        if (url.pathname.endsWith("/post.listCreator")) {
+          return Promise.resolve(response({ body: [summary()] }));
+        }
+        if (url.pathname.endsWith("/post.info")) {
+          return Promise.resolve(
+            response({
+              body: {
+                ...summary(),
+                body: { text: "Hello" },
+                coverImageUrl: null,
+                imageForShare: null,
+                nextPost: null,
+                prevPost: null,
+                type: "text",
+              },
+            }),
+          );
+        }
 
-      throw new Error(`Unexpected request: ${url.href}`);
+        throw new Error(`Unexpected request: ${url.href}`);
+      },
     };
 
     await expect(
       runCli(
         ["download", "--creator", "creator", "--output", directory],
         {},
-        { fetch },
+        { transport },
       ),
     ).resolves.toBe(0);
     await expect(
@@ -121,16 +152,19 @@ describe("runCli", () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-cli-"));
     let postInfoCalls = 0;
     const lines: string[] = [];
-    const fetch: typeof globalThis.fetch = (input) => {
-      const url = new URL(requestUrl(input));
-      if (url.pathname.endsWith("/post.listCreator")) {
-        return Promise.resolve(Response.json({ body: [summary()] }));
-      }
-      if (url.pathname.endsWith("/post.info")) {
-        postInfoCalls += 1;
-      }
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: (input) => {
+        const url = new URL(requestUrl(input));
+        if (url.pathname.endsWith("/post.listCreator")) {
+          return Promise.resolve(response({ body: [summary()] }));
+        }
+        if (url.pathname.endsWith("/post.info")) {
+          postInfoCalls += 1;
+        }
 
-      throw new Error(`Unexpected request: ${url.href}`);
+        throw new Error(`Unexpected request: ${url.href}`);
+      },
     };
 
     await expect(
@@ -144,7 +178,7 @@ describe("runCli", () => {
           "--dry-run",
         ],
         {},
-        { fetch, write: (line) => lines.push(line) },
+        { transport, write: (line) => lines.push(line) },
       ),
     ).resolves.toBe(0);
 
@@ -156,19 +190,22 @@ describe("runCli", () => {
 
   it("writes response debug logs for API errors when verbose is enabled", async () => {
     const lines: string[] = [];
-    const fetch: typeof globalThis.fetch = () =>
-      Promise.resolve(
-        Response.json(
-          { error: "nope" },
-          { status: 500, statusText: "Internal Server Error" },
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: () =>
+        Promise.resolve(
+          response(
+            { error: "nope" },
+            { status: 500, statusText: "Internal Server Error" },
+          ),
         ),
-      );
+    };
 
     await expect(
       runCli(
         ["download", "--creator", "creator", "--dry-run", "--verbose"],
         {},
-        { fetch, write: (line) => lines.push(line) },
+        { transport, write: (line) => lines.push(line) },
       ),
     ).resolves.toBe(1);
 
@@ -179,16 +216,19 @@ describe("runCli", () => {
 
   it("passes a configured user agent to FANBOX API requests", async () => {
     let userAgent: null | string = null;
-    const fetch: typeof globalThis.fetch = (_input, init) => {
-      userAgent = new Headers(init?.headers).get("User-Agent");
-      return Promise.resolve(Response.json({ body: [summary()] }));
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: (input) => {
+        userAgent = headers(input).get("User-Agent");
+        return Promise.resolve(response({ body: [summary()] }));
+      },
     };
 
     await expect(
       runCli(
         ["download", "--creator", "creator", "--dry-run", "--user-agent", "ua"],
         {},
-        { fetch, write: () => undefined },
+        { transport, write: () => undefined },
       ),
     ).resolves.toBe(0);
 
