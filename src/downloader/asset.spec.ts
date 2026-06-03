@@ -2,11 +2,42 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
+import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
 import { AssetDownloader } from "./asset.js";
 import { RequestScheduler } from "./scheduler.js";
+
+function requestHeaders(request: HttpRequest | string | URL): Headers {
+  if (typeof request === "string" || request instanceof URL) {
+    return new Headers();
+  }
+
+  return new Headers(request.headers);
+}
+
+function response(
+  body: string,
+  init: {
+    headers?: Headers | Record<string, string>;
+    status?: number;
+    statusText?: string;
+  } = {},
+): HttpResponse {
+  const status = init.status ?? 200;
+
+  return {
+    body: Readable.from([body]),
+    headers: new Headers(init.headers),
+    json: () => Promise.resolve(JSON.parse(body) as unknown),
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: init.statusText ?? "",
+    text: () => Promise.resolve(body),
+  };
+}
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -24,17 +55,21 @@ describe("AssetDownloader", () => {
       },
     );
     let range: null | string = null;
-    const downloader = new AssetDownloader({
-      fetch: (_input, init) => {
-        range = new Headers(init?.headers).get("Range");
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: (request) => {
+        range = requestHeaders(request).get("Range");
         return Promise.resolve(
-          new Response("def", {
+          response("def", {
             headers: { "Last-Modified": "Wed, 27 May 2026 12:17:41 GMT" },
             status: 206,
           }),
         );
       },
+    };
+    const downloader = new AssetDownloader({
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport,
     });
 
     const result = await downloader.download({
@@ -54,8 +89,11 @@ describe("AssetDownloader", () => {
     const destination = path.join(directory, "asset.bin");
     await writeFile(`${destination}.part`, "old");
     const downloader = new AssetDownloader({
-      fetch: () => Promise.resolve(new Response("new", { status: 200 })),
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: () => Promise.resolve(response("new", { status: 200 })),
+      },
     });
 
     await downloader.download({
@@ -74,8 +112,11 @@ describe("AssetDownloader", () => {
   it("rejects an asset path over the cross-platform budget", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-asset-"));
     const downloader = new AssetDownloader({
-      fetch: () => Promise.resolve(new Response("data", { status: 200 })),
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: () => Promise.resolve(response("data", { status: 200 })),
+      },
     });
 
     await expect(

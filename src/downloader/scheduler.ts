@@ -1,3 +1,4 @@
+import type { HttpResponse } from "../http.js";
 import { logDebugResponse } from "./errors.js";
 import type { Logger } from "./logger.js";
 import { silentLogger } from "./logger.js";
@@ -11,8 +12,6 @@ export interface RequestSchedulerOptions {
   requestIntervalMs?: number;
   sleep?: (milliseconds: number) => Promise<void>;
 }
-
-type Fetch = typeof globalThis.fetch;
 
 export class RequestScheduler {
   #active = 0;
@@ -40,15 +39,17 @@ export class RequestScheduler {
     this.#sleep = options.sleep ?? defaultSleep;
   }
 
-  public async fetch(
-    input: Parameters<Fetch>[0],
-    fetch: Fetch = globalThis.fetch,
-    init?: Parameters<Fetch>[1],
-  ): Promise<Response> {
+  public pause(milliseconds: number): void {
+    this.#pausedUntil = Math.max(this.#pausedUntil, this.#now() + milliseconds);
+  }
+
+  public async request(
+    operation: () => Promise<HttpResponse>,
+  ): Promise<HttpResponse> {
     let attempt = 0;
     for (;;) {
       try {
-        const response = await this.run(() => fetch(input, init));
+        const response = await this.run(operation);
         if (
           !isRetryableStatus(response.status) ||
           attempt >= this.#maxRetries
@@ -78,10 +79,6 @@ export class RequestScheduler {
       });
       attempt += 1;
     }
-  }
-
-  public pause(milliseconds: number): void {
-    this.#pausedUntil = Math.max(this.#pausedUntil, this.#now() + milliseconds);
   }
 
   public async run<T>(operation: () => Promise<T>): Promise<T> {
@@ -127,7 +124,10 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
-function parseRetryAfter(response: Response, now: number): number | undefined {
+function parseRetryAfter(
+  response: HttpResponse,
+  now: number,
+): number | undefined {
   const retryAfter = response.headers.get("Retry-After");
   if (!retryAfter) {
     return undefined;

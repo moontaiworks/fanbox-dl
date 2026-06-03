@@ -1,10 +1,12 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
 import { FanboxApiError } from "../client.js";
+import type { HttpRequest, HttpResponse } from "../http.js";
 import type { ImagePost, PostSummary } from "../types.js";
 import { AssetDownloader } from "./asset.js";
 import type { Logger } from "./logger.js";
@@ -35,12 +37,30 @@ function post(extension = "png"): ImagePost {
   };
 }
 
-function requestUrl(input: Parameters<typeof globalThis.fetch>[0]): string {
+function requestUrl(input: HttpRequest | string | URL): string {
   return typeof input === "string"
     ? input
     : input instanceof URL
       ? input.href
       : input.url;
+}
+
+function response(
+  body: unknown,
+  init: { headers?: Headers | Record<string, string>; status?: number } = {},
+): HttpResponse {
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  const status = init.status ?? 200;
+
+  return {
+    body: Readable.from([text]),
+    headers: new Headers(init.headers),
+    json: () => Promise.resolve(JSON.parse(text) as unknown),
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: "",
+    text: () => Promise.resolve(text),
+  };
 }
 
 function summary(restricted = false, title = "Title"): PostSummary {
@@ -87,9 +107,12 @@ describe("syncCreator", () => {
       paginateCreatorPosts: () => Promise.resolve([]),
     };
     const assetDownloader = new AssetDownloader({
-      fetch: (input) =>
-        Promise.resolve(new Response(requestUrl(input), { status: 200 })),
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: (input) =>
+          Promise.resolve(response(requestUrl(input), { status: 200 })),
+      },
     });
 
     await syncCreator({
@@ -161,13 +184,14 @@ describe("syncCreator", () => {
       paginateCreatorPosts: () => Promise.resolve([]),
     };
     const assetDownloader = new AssetDownloader({
-      fetch: (input) => {
-        assetCalls += 1;
-        return Promise.resolve(
-          new Response(requestUrl(input), { status: 200 }),
-        );
-      },
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: (input) => {
+          assetCalls += 1;
+          return Promise.resolve(response(requestUrl(input), { status: 200 }));
+        },
+      },
     });
 
     await syncCreator({
@@ -210,13 +234,14 @@ describe("syncCreator", () => {
       paginateCreatorPosts: () => Promise.resolve([]),
     };
     const assetDownloader = new AssetDownloader({
-      fetch: (input) => {
-        assetCalls += 1;
-        return Promise.resolve(
-          new Response(requestUrl(input), { status: 200 }),
-        );
-      },
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: (input) => {
+          assetCalls += 1;
+          return Promise.resolve(response(requestUrl(input), { status: 200 }));
+        },
+      },
     });
 
     await syncCreator({
@@ -249,8 +274,11 @@ describe("syncCreator", () => {
       paginateCreatorPosts: () => Promise.resolve([]),
     };
     const assetDownloader = new AssetDownloader({
-      fetch: () => Promise.resolve(new Response("asset", { status: 200 })),
       scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: () => Promise.resolve(response("asset", { status: 200 })),
+      },
     });
 
     await syncCreator({
@@ -282,7 +310,7 @@ describe("syncCreator", () => {
       getPost: () =>
         Promise.reject(
           new FanboxApiError(
-            Response.json({ error: "post failed" }, { status: 403 }),
+            response({ error: "post failed" }, { status: 403 }),
             { error: "post failed" },
           ),
         ),
@@ -319,11 +347,12 @@ describe("syncCreator", () => {
       paginateCreatorPosts: () => Promise.resolve([]),
     };
     const assetDownloader = new AssetDownloader({
-      fetch: () =>
-        Promise.resolve(
-          Response.json({ error: "asset failed" }, { status: 403 }),
-        ),
       scheduler: new RequestScheduler({ concurrency: 1, maxRetries: 0 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: () =>
+          Promise.resolve(response({ error: "asset failed" }, { status: 403 })),
+      },
     });
 
     await syncCreator({

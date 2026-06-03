@@ -2,16 +2,19 @@ import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
+import {
+  Http2Transport,
+  type HttpResponse,
+  type HttpTransport,
+} from "../http.js";
 import { assertPathBudget } from "./path.js";
 import type { RequestScheduler } from "./scheduler.js";
 
 export interface AssetDownloaderOptions {
-  fetch?: Fetch;
   scheduler: RequestScheduler;
+  transport?: HttpTransport;
 }
 
 export interface AssetDownloadOptions {
@@ -26,15 +29,13 @@ export interface AssetDownloadResult {
   sha256: string;
 }
 
-type Fetch = typeof globalThis.fetch;
-
 export class AssetDownloader {
-  readonly #fetch: Fetch;
   readonly #scheduler: RequestScheduler;
+  readonly #transport: HttpTransport;
 
   public constructor(options: AssetDownloaderOptions) {
-    this.#fetch = options.fetch ?? globalThis.fetch;
     this.#scheduler = options.scheduler;
+    this.#transport = options.transport ?? new Http2Transport();
   }
 
   public async download(
@@ -47,14 +48,18 @@ export class AssetDownloader {
     const partialBytes = await stat(temporaryPath)
       .then((result) => result.size)
       .catch(() => 0);
-    const headers = new Headers();
+    const headers: Record<string, string> = {};
     if (partialBytes > 0) {
-      headers.set("Range", `bytes=${partialBytes}-`);
+      headers.Range = `bytes=${partialBytes}-`;
     }
 
-    const response = await this.#scheduler.fetch(options.url, this.#fetch, {
-      headers,
-    });
+    const response = await this.#scheduler.request(() =>
+      this.#transport.request({
+        headers,
+        method: "GET",
+        url: options.url,
+      }),
+    );
     if (!response.ok) {
       throw new AssetDownloadError(
         response,
@@ -62,11 +67,8 @@ export class AssetDownloader {
         await readResponseBody(response),
       );
     }
-    if (!response.body) {
-      throw new Error(`Asset download returned no body: ${options.url}`);
-    }
     await pipeline(
-      Readable.fromWeb(response.body as unknown as NodeReadableStream),
+      response.body,
       createWriteStream(temporaryPath, {
         flags: response.status === 206 && partialBytes > 0 ? "a" : "w",
       }),
@@ -92,7 +94,7 @@ export class AssetDownloadError extends Error {
   public readonly statusText: string;
   public readonly url: string;
 
-  public constructor(response: Response, url: string, body: unknown) {
+  public constructor(response: HttpResponse, url: string, body: unknown) {
     super(`Asset download failed: ${response.status} ${url}`);
     this.name = "AssetDownloadError";
     this.body = body;
@@ -111,9 +113,11 @@ async function hashFile(filePath: string): Promise<string> {
   return hash.digest("hex");
 }
 
-async function readResponseBody(response: Response): Promise<unknown> {
-  return response
-    .clone()
-    .json()
-    .catch(async () => response.text());
+async function readResponseBody(response: HttpResponse): Promise<unknown> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
 }
