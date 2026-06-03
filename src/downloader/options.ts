@@ -30,10 +30,6 @@ export function parseDownloadOptions(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): DownloadOptions {
-  if (args[0] !== "download") {
-    throw new CliUsageError("expected the download command");
-  }
-
   const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting) {
