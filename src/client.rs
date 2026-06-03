@@ -3,7 +3,7 @@ use crate::scheduler::RequestScheduler;
 use crate::types::{
     Creator, CreatorSummary, FanboxEnvelope, Plan, Post, PostSummary, SupportingPlan,
 };
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, COOKIE, ORIGIN, REFERER, USER_AGENT};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, COOKIE, ORIGIN, USER_AGENT};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
@@ -222,13 +222,7 @@ impl FanboxClient {
             HeaderValue::from_static("application/json, text/plain, */*"),
         );
         headers.insert(ORIGIN, HeaderValue::from_static("https://www.fanbox.cc"));
-        headers.insert(REFERER, HeaderValue::from_static("https://www.fanbox.cc/"));
-        headers.insert("Sec-Fetch-Dest", HeaderValue::from_static("empty"));
-        headers.insert("Sec-Fetch-Mode", HeaderValue::from_static("cors"));
-        headers.insert("Sec-Fetch-Site", HeaderValue::from_static("same-site"));
-        if let Ok(value) = HeaderValue::from_str(&self.user_agent) {
-            headers.insert(USER_AGENT, value);
-        }
+        headers.insert(USER_AGENT, HeaderValue::from_str(&self.user_agent).unwrap());
         if let Some(cookie) = &self.cookie {
             if let Ok(value) = HeaderValue::from_str(cookie) {
                 headers.insert(COOKIE, value);
@@ -280,7 +274,6 @@ mod tests {
             .and(path("/creator.get"))
             .and(query_param("creatorId", "creator"))
             .and(header("Origin", "https://www.fanbox.cc"))
-            .and(header("Referer", "https://www.fanbox.cc/"))
             .and(header("User-Agent", "ua"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "body": {
