@@ -29,6 +29,8 @@ export interface HttpTransport {
   request(request: HttpRequest | string | URL): Promise<HttpResponse>;
 }
 
+type BodyInit = Blob | string | Uint8Array;
+
 interface NormalizedHttpRequest {
   body: BodyInit | undefined;
   headers: Headers | Record<string, string> | undefined;

@@ -9,7 +9,8 @@
     "paths": {
       "#*": ["./src/*"]
     },
-    "lib": ["DOM", "ES2024"],
+    "lib": ["ES2024"],
+    "types": ["node"],
     "noEmit": false,
     "noEmitOnError": true,
     "sourceMap": true,
