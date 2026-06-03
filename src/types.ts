@@ -143,6 +143,8 @@ export interface ListCreatorPlansParams {
 
 export interface ListCreatorPostsParams extends PostListParams {
   creatorId: string;
+  firstId?: string;
+  firstPublishedDatetime?: string;
   sort?: PostSort;
 }
 

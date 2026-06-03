@@ -75,8 +75,14 @@ describe("FanboxClient collection endpoints", () => {
     ],
     [
       "listCreatorPosts",
-      "post.listCreator?creatorId=creator&limit=30&sort=newest",
-      { creatorId: "creator", limit: 30, sort: "newest" },
+      "post.listCreator?creatorId=creator&firstId=123&firstPublishedDatetime=2026-05-27+21%3A17%3A41&limit=30&sort=newest",
+      {
+        creatorId: "creator",
+        firstId: "123",
+        firstPublishedDatetime: "2026-05-27 21:17:41",
+        limit: 30,
+        sort: "newest",
+      },
     ],
     ["getPost", "post.info?postId=11975272", { postId: "11975272" }],
   ] as const)(
