@@ -3,6 +3,7 @@ import {
   type HttpResponse,
   type HttpTransport,
 } from "./http.js";
+import { createFanboxRequestHeaders } from "./fanbox-headers.js";
 import type {
   Creator,
   CreatorSummary,
@@ -40,15 +41,16 @@ export class FanboxApiError extends Error {
 
 export class FanboxClient {
   readonly #baseUrl: string;
-  readonly #cookie?: string;
+  readonly #headers: Record<string, string>;
   readonly #transport: HttpTransport;
-  readonly #userAgent: string;
 
   public constructor(options: FanboxClientOptions = {}) {
     this.#baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
-    this.#cookie = options.cookie;
+    this.#headers = createFanboxRequestHeaders({
+      cookie: options.cookie,
+      userAgent: options.userAgent,
+    });
     this.#transport = options.transport ?? new Http2Transport();
-    this.#userAgent = options.userAgent ?? randomUserAgent();
   }
 
   public getCreator(params: GetCreatorParams): Promise<Creator> {
@@ -104,21 +106,8 @@ export class FanboxClient {
       }
     }
 
-    const headers: Record<string, string> = {
-      Accept: "application/json, text/plain, */*",
-      Origin: "https://www.fanbox.cc",
-      Referer: "https://www.fanbox.cc/",
-      "Sec-Fetch-Dest": "empty",
-      "Sec-Fetch-Mode": "cors",
-      "Sec-Fetch-Site": "same-site",
-      "User-Agent": this.#userAgent,
-    };
-    if (this.#cookie !== undefined) {
-      headers.Cookie = this.#cookie;
-    }
-
     const response = await this.#transport.request({
-      headers,
+      headers: this.#headers,
       method: "GET",
       url,
     });
@@ -129,10 +118,6 @@ export class FanboxClient {
 
     return (body as FanboxEnvelope<T>).body;
   }
-}
-
-function randomUserAgent(): string {
-  return `${Math.random().toString(36).substring(2, 15)}/${Math.random().toFixed(5)}`;
 }
 
 async function readResponseBody(response: HttpResponse): Promise<unknown> {

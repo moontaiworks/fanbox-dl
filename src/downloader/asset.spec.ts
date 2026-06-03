@@ -84,6 +84,38 @@ describe("AssetDownloader", () => {
     expect(result).toMatchObject({ bytes: 6, sha256: sha256("abcdef") });
   });
 
+  it("merges default request headers with the range request", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-asset-"));
+    const destination = path.join(directory, "asset.bin");
+    await writeFile(`${destination}.part`, "abc");
+    let capturedHeaders = new Headers();
+    const downloader = new AssetDownloader({
+      headers: {
+        Cookie: "FANBOXSESSID=session-id",
+        "User-Agent": "ua",
+      },
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: (request) => {
+          capturedHeaders = requestHeaders(request);
+          return Promise.resolve(response("def", { status: 206 }));
+        },
+      },
+    });
+
+    await downloader.download({
+      publishedDatetime: "2026-05-27T21:17:41+09:00",
+      relativePath: "asset.bin",
+      rootDirectory: directory,
+      url: "https://example.test/asset.bin",
+    });
+
+    expect(capturedHeaders.get("Cookie")).toBe("FANBOXSESSID=session-id");
+    expect(capturedHeaders.get("Range")).toBe("bytes=3-");
+    expect(capturedHeaders.get("User-Agent")).toBe("ua");
+  });
+
   it("restarts a partial asset when the server returns a full response", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-asset-"));
     const destination = path.join(directory, "asset.bin");

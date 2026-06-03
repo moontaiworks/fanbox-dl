@@ -13,6 +13,7 @@ import { assertPathBudget } from "./path.js";
 import type { RequestScheduler } from "./scheduler.js";
 
 export interface AssetDownloaderOptions {
+  headers?: Record<string, string>;
   scheduler: RequestScheduler;
   transport?: HttpTransport;
 }
@@ -30,10 +31,12 @@ export interface AssetDownloadResult {
 }
 
 export class AssetDownloader {
+  readonly #headers: Record<string, string>;
   readonly #scheduler: RequestScheduler;
   readonly #transport: HttpTransport;
 
   public constructor(options: AssetDownloaderOptions) {
+    this.#headers = options.headers ?? {};
     this.#scheduler = options.scheduler;
     this.#transport = options.transport ?? new Http2Transport();
   }
@@ -48,7 +51,7 @@ export class AssetDownloader {
     const partialBytes = await stat(temporaryPath)
       .then((result) => result.size)
       .catch(() => 0);
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...this.#headers };
     if (partialBytes > 0) {
       headers.Range = `bytes=${partialBytes}-`;
     }

@@ -234,4 +234,75 @@ describe("runCli", () => {
 
     expect(userAgent).toBe("ua");
   });
+
+  it("passes FANBOX request headers to asset downloads", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-cli-"));
+    let assetHeaders = new Headers();
+    const transport: HttpTransport = {
+      close: () => Promise.resolve(),
+      request: (input) => {
+        const url = new URL(requestUrl(input));
+        if (url.pathname.endsWith("/post.listCreator")) {
+          return Promise.resolve(response({ body: [summary()] }));
+        }
+        if (url.pathname.endsWith("/post.info")) {
+          return Promise.resolve(
+            response({
+              body: {
+                ...summary(),
+                body: {
+                  images: [
+                    {
+                      extension: "png",
+                      height: 1,
+                      id: "image-id",
+                      originalUrl: "https://downloads.example.test/image.png",
+                      thumbnailUrl: "",
+                      width: 1,
+                    },
+                  ],
+                  text: "Hello",
+                },
+                coverImageUrl: null,
+                imageForShare: null,
+                nextPost: null,
+                prevPost: null,
+                type: "image",
+              },
+            }),
+          );
+        }
+        if (url.hostname === "downloads.example.test") {
+          assetHeaders = headers(input);
+          return Promise.resolve(response("asset"));
+        }
+
+        throw new Error(`Unexpected request: ${url.href}`);
+      },
+    };
+
+    await expect(
+      runCli(
+        [
+          "download",
+          "--creator",
+          "creator",
+          "--cookie",
+          "FANBOXSESSID=session-id",
+          "--output",
+          directory,
+          "--user-agent",
+          "ua",
+        ],
+        {},
+        { transport },
+      ),
+    ).resolves.toBe(0);
+
+    expect(assetHeaders.get("Cookie")).toBe("FANBOXSESSID=session-id");
+    expect(assetHeaders.get("Origin")).toBe("https://www.fanbox.cc");
+    expect(assetHeaders.get("Referer")).toBe("https://www.fanbox.cc/");
+    expect(assetHeaders.get("Sec-Fetch-Site")).toBe("same-site");
+    expect(assetHeaders.get("User-Agent")).toBe("ua");
+  });
 });

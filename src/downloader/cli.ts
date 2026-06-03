@@ -1,4 +1,5 @@
 import { FanboxClient } from "../client.js";
+import { createFanboxRequestHeaders } from "../fanbox-headers.js";
 import { Http2Transport, type HttpTransport } from "../http.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
@@ -73,6 +74,10 @@ export async function runCli(
     });
     const transport = dependencies.transport ?? new Http2Transport();
     transportToClose = dependencies.transport ? undefined : transport;
+    const requestHeaders = createFanboxRequestHeaders({
+      cookie: options.cookie,
+      userAgent: options.userAgent,
+    });
     const scheduler = new RequestScheduler({
       concurrency: options.concurrency,
       logger,
@@ -81,13 +86,13 @@ export async function runCli(
       requestIntervalMs: options.requestIntervalMs,
     });
     const client = new FanboxClient({
-      cookie: options.cookie,
+      cookie: requestHeaders.Cookie,
       transport: {
         close: () => transport.close(),
         request: (request) =>
           scheduler.request(() => transport.request(request)),
       },
-      userAgent: options.userAgent,
+      userAgent: requestHeaders["User-Agent"],
     });
     const creatorIds = await resolveCreatorIds(client, options);
     if (options.dryRun) {
@@ -111,7 +116,11 @@ export async function runCli(
       return 0;
     }
 
-    const assetDownloader = new AssetDownloader({ scheduler, transport });
+    const assetDownloader = new AssetDownloader({
+      headers: requestHeaders,
+      scheduler,
+      transport,
+    });
     let failed = false;
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", "Creator sync started", { creatorId });
