@@ -21,6 +21,7 @@ describe("parseDownloadOptions", () => {
     expect(options).toMatchObject({
       concurrency: 3,
       creatorIds: ["alpha", "beta"],
+      dryRun: false,
       following: true,
       ignoreCreatorIds: ["beta"],
       logFormat: "json",
@@ -29,7 +30,20 @@ describe("parseDownloadOptions", () => {
       rateLimitPauseMs: 60_000,
       requestIntervalMs: 0,
       supporting: false,
+      verbose: false,
       verifyAssets: false,
+    });
+  });
+
+  it("parses dry run and verbose flags", () => {
+    const options = parseDownloadOptions(
+      ["download", "--creator", "alpha", "--dry-run", "--verbose"],
+      {},
+    );
+
+    expect(options).toMatchObject({
+      dryRun: true,
+      verbose: true,
     });
   });
 

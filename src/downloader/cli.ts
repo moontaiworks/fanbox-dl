@@ -1,6 +1,7 @@
-import { FanboxClient } from "../client.js";
+import { FanboxApiError, FanboxClient } from "../client.js";
 import { AssetDownloader } from "./asset.js";
-import { createLogger } from "./logger.js";
+import { discoverCreatorPosts } from "./discovery.js";
+import { createLogger, type Logger } from "./logger.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
 import { assertPathBudget } from "./path.js";
 import { resolveCreatorIds } from "./resolver.js";
@@ -12,16 +13,57 @@ export interface RunCliDependencies {
   write?: (line: string) => void;
 }
 
+export const DOWNLOAD_HELP = `Usage: fanbox-dl download [options]
+
+Download FANBOX posts for selected creators.
+
+Selectors:
+  --creator <id>            Add a creator ID. Can be repeated.
+  --following               Add all followed creators.
+  --supporting              Add all supporting creators.
+  --ignore-creator <id>     Exclude a creator ID. Can be repeated.
+
+Auth:
+  --cookie <value>          Raw session ID or FANBOXSESSID=... cookie.
+  --cookie-file <path>      Read session value from a file.
+  FANBOX_SESSION_ID         Environment fallback.
+
+Download:
+  --output <path>           Output directory. Default: fanbox-downloads.
+  --dry-run                 List creators/posts without downloading or writing.
+  --verify-assets           Verify existing asset size and SHA-256 locally.
+
+Requests:
+  --concurrency <n>         Concurrent requests. Default: 3.
+  --request-interval-ms <n> Delay between request starts. Default: 0.
+  --rate-limit-pause-ms <n> Pause after 429 without Retry-After. Default: 60000.
+  --max-retries <n>         Retry attempts. Default: 5.
+
+Output:
+  --log-format json|pretty  Default: json.
+  --verbose                 Enable debug logs.
+  --help                    Show this help.
+`;
+
 export async function runCli(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
   dependencies: RunCliDependencies = {},
 ): Promise<number> {
+  const write =
+    dependencies.write ?? ((line: string) => process.stderr.write(`${line}\n`));
+  if (args.includes("--help") || args.includes("-h")) {
+    write(DOWNLOAD_HELP);
+    return 0;
+  }
+
+  let logger: Logger | undefined;
   try {
     const options = parseDownloadOptions(args, env);
     assertPathBudget(options.output);
-    const logger = createLogger({
+    logger = createLogger({
       format: options.logFormat,
+      level: options.verbose ? "debug" : "info",
       write: dependencies.write,
     });
     const fetch = dependencies.fetch ?? globalThis.fetch;
@@ -36,8 +78,29 @@ export async function runCli(
       cookie: options.cookie,
       fetch: (input, init) => scheduler.fetch(input, fetch, init),
     });
-    const assetDownloader = new AssetDownloader({ fetch, scheduler });
     const creatorIds = await resolveCreatorIds(client, options);
+    if (options.dryRun) {
+      for (const creatorId of creatorIds) {
+        logger.info("dry-run.creator", "Dry-run creator selected", {
+          creatorId,
+        });
+        for (const post of await discoverCreatorPosts(client, creatorId, {
+          logger,
+        })) {
+          logger.info("dry-run.post", "Dry-run post discovered", {
+            creatorId,
+            postId: post.id,
+            restricted: post.isRestricted,
+            title: post.title,
+            updatedDatetime: post.updatedDatetime,
+          });
+        }
+      }
+
+      return 0;
+    }
+
+    const assetDownloader = new AssetDownloader({ fetch, scheduler });
     let failed = false;
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", "Creator sync started", { creatorId });
@@ -56,6 +119,7 @@ export async function runCli(
         });
       } catch (error) {
         failed = true;
+        logDebugErrorResponse(logger, error);
         logger.error("creator.sync.failed", "Creator sync failed", {
           creatorId,
           error: String(error),
@@ -66,17 +130,22 @@ export async function runCli(
     return failed ? 1 : 0;
   } catch (error) {
     const usage = error instanceof CliUsageError;
-    const write =
-      dependencies.write ??
-      ((line: string) => process.stderr.write(`${line}\n`));
-    write(
-      JSON.stringify({
-        event: usage ? "cli.usage.error" : "cli.failed",
-        level: "error",
-        msg: String(error),
-        time: new Date().toISOString(),
-      }),
-    );
+    const message = String(error);
+    if (usage) {
+      write(`${message}\n\n${DOWNLOAD_HELP}`);
+    } else {
+      if (logger) {
+        logDebugErrorResponse(logger, error);
+      }
+      write(
+        JSON.stringify({
+          event: "cli.failed",
+          level: "error",
+          msg: message,
+          time: new Date().toISOString(),
+        }),
+      );
+    }
     return usage ? 2 : 1;
   }
 }
@@ -87,4 +156,19 @@ function hasFailures(
   return Object.values(manifest.posts).some(
     (post) => post?.status === "failed",
   );
+}
+
+function logDebugErrorResponse(
+  logger: ReturnType<typeof createLogger>,
+  error: unknown,
+): void {
+  if (!(error instanceof FanboxApiError)) {
+    return;
+  }
+
+  logger.debug("api.response.error", "FANBOX API error response", {
+    body: error.body,
+    status: error.status,
+    statusText: error.statusText,
+  });
 }

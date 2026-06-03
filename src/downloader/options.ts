@@ -5,6 +5,7 @@ export interface DownloadOptions {
   concurrency: number;
   cookie?: string;
   creatorIds: string[];
+  dryRun: boolean;
   following: boolean;
   ignoreCreatorIds: string[];
   logFormat: "json" | "pretty";
@@ -13,6 +14,7 @@ export interface DownloadOptions {
   rateLimitPauseMs: number;
   requestIntervalMs: number;
   supporting: boolean;
+  verbose: boolean;
   verifyAssets: boolean;
 }
 
@@ -31,26 +33,7 @@ export function parseDownloadOptions(
     throw new CliUsageError("expected the download command");
   }
 
-  const { values } = parseArgs({
-    allowPositionals: false,
-    args: args.slice(1),
-    options: {
-      concurrency: { default: "3", type: "string" },
-      cookie: { type: "string" },
-      "cookie-file": { type: "string" },
-      creator: { multiple: true, type: "string" },
-      following: { default: false, type: "boolean" },
-      "ignore-creator": { multiple: true, type: "string" },
-      "log-format": { default: "json", type: "string" },
-      "max-retries": { default: "5", type: "string" },
-      output: { default: "fanbox-downloads", type: "string" },
-      "rate-limit-pause-ms": { default: "60000", type: "string" },
-      "request-interval-ms": { default: "0", type: "string" },
-      supporting: { default: false, type: "boolean" },
-      "verify-assets": { default: false, type: "boolean" },
-    },
-    strict: true,
-  });
+  const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting) {
     throw new CliUsageError("at least one creator selector is required");
@@ -72,6 +55,7 @@ export function parseDownloadOptions(
     concurrency: parsePositiveInteger("concurrency", values.concurrency),
     cookie,
     creatorIds,
+    dryRun: values["dry-run"],
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
     logFormat: values["log-format"],
@@ -86,6 +70,7 @@ export function parseDownloadOptions(
       values["request-interval-ms"],
     ),
     supporting: values.supporting,
+    verbose: values.verbose,
     verifyAssets: values["verify-assets"],
   };
 }
@@ -97,6 +82,35 @@ function normalizeCookie(cookie?: string): string | undefined {
   }
 
   return value.includes("=") ? value : `FANBOXSESSID=${value}`;
+}
+
+function parseDownloadArgs(args: string[]) {
+  try {
+    return parseArgs({
+      allowPositionals: false,
+      args: args.slice(1),
+      options: {
+        concurrency: { default: "3", type: "string" },
+        cookie: { type: "string" },
+        "cookie-file": { type: "string" },
+        creator: { multiple: true, type: "string" },
+        "dry-run": { default: false, type: "boolean" },
+        following: { default: false, type: "boolean" },
+        "ignore-creator": { multiple: true, type: "string" },
+        "log-format": { default: "json", type: "string" },
+        "max-retries": { default: "5", type: "string" },
+        output: { default: "fanbox-downloads", type: "string" },
+        "rate-limit-pause-ms": { default: "60000", type: "string" },
+        "request-interval-ms": { default: "0", type: "string" },
+        supporting: { default: false, type: "boolean" },
+        verbose: { default: false, type: "boolean" },
+        "verify-assets": { default: false, type: "boolean" },
+      },
+      strict: true,
+    });
+  } catch (error) {
+    throw new CliUsageError((error as Error).message);
+  }
 }
 
 function parseNonNegativeInteger(name: string, value: string): number {
