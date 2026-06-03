@@ -1,6 +1,7 @@
-import { FanboxApiError, FanboxClient } from "../client.js";
+import { FanboxClient } from "../client.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
+import { logDebugErrorResponse } from "./errors.js";
 import { createLogger, type Logger } from "./logger.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
 import { assertPathBudget } from "./path.js";
@@ -156,19 +157,4 @@ function hasFailures(
   return Object.values(manifest.posts).some(
     (post) => post?.status === "failed",
   );
-}
-
-function logDebugErrorResponse(
-  logger: ReturnType<typeof createLogger>,
-  error: unknown,
-): void {
-  if (!(error instanceof FanboxApiError)) {
-    return;
-  }
-
-  logger.debug("api.response.error", "FANBOX API error response", {
-    body: error.body,
-    status: error.status,
-    statusText: error.statusText,
-  });
 }

@@ -56,8 +56,10 @@ export class AssetDownloader {
       headers,
     });
     if (!response.ok) {
-      throw new Error(
-        `Asset download failed: ${response.status} ${options.url}`,
+      throw new AssetDownloadError(
+        response,
+        options.url,
+        await readResponseBody(response),
       );
     }
     if (!response.body) {
@@ -84,6 +86,22 @@ export class AssetDownloader {
   }
 }
 
+export class AssetDownloadError extends Error {
+  public readonly body: unknown;
+  public readonly status: number;
+  public readonly statusText: string;
+  public readonly url: string;
+
+  public constructor(response: Response, url: string, body: unknown) {
+    super(`Asset download failed: ${response.status} ${url}`);
+    this.name = "AssetDownloadError";
+    this.body = body;
+    this.status = response.status;
+    this.statusText = response.statusText;
+    this.url = url;
+  }
+}
+
 async function hashFile(filePath: string): Promise<string> {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(filePath)) {
@@ -91,4 +109,11 @@ async function hashFile(filePath: string): Promise<string> {
   }
 
   return hash.digest("hex");
+}
+
+async function readResponseBody(response: Response): Promise<unknown> {
+  return response
+    .clone()
+    .json()
+    .catch(async () => response.text());
 }

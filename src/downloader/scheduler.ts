@@ -1,3 +1,4 @@
+import { logDebugResponse } from "./errors.js";
 import type { Logger } from "./logger.js";
 import { silentLogger } from "./logger.js";
 
@@ -54,6 +55,9 @@ export class RequestScheduler {
         ) {
           return response;
         }
+        await logDebugResponse(this.#logger, response, {
+          attempt: attempt + 1,
+        });
         if (response.status === 429) {
           const pauseMs =
             parseRetryAfter(response, this.#now()) ?? this.#rateLimitPauseMs;

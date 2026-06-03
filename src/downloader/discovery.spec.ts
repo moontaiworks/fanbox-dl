@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { FanboxApiError } from "../client.js";
 import type { PostSummary } from "../types.js";
 import { discoverCreatorPosts } from "./discovery.js";
+import type { Logger } from "./logger.js";
 
 function summary(id: string): PostSummary {
   return {
@@ -22,6 +24,15 @@ function summary(id: string): PostSummary {
     title: id,
     updatedDatetime: `2026-05-${id.padStart(2, "0")}T00:00:00+09:00`,
     user: { iconUrl: "", name: "Creator", userId: "1" },
+  };
+}
+
+function testLogger(entries: unknown[]): Logger {
+  return {
+    debug: (event, _message, fields) => entries.push({ event, ...fields }),
+    error: () => undefined,
+    info: () => undefined,
+    warn: () => undefined,
   };
 }
 
@@ -76,5 +87,41 @@ describe("discoverCreatorPosts", () => {
 
     expect(posts.map((post) => post.id)).toEqual(["3", "2", "1"]);
     expect(paginateCalls).toBe(1);
+  });
+
+  it("debug logs direct cursor API error responses before fallback", async () => {
+    const entries: unknown[] = [];
+    let directCalls = 0;
+    const client = {
+      listCreatorPosts: () => {
+        directCalls += 1;
+        if (directCalls === 1) {
+          return Promise.reject(
+            new FanboxApiError(
+              Response.json({ error: "direct failed" }, { status: 500 }),
+              { error: "direct failed" },
+            ),
+          );
+        }
+
+        return Promise.resolve([summary("1")]);
+      },
+      paginateCreatorPosts: () =>
+        Promise.resolve([
+          "https://api.fanbox.cc/post.listCreator?creatorId=creator&firstId=1",
+        ]),
+    };
+
+    await discoverCreatorPosts(client, "creator", {
+      logger: testLogger(entries),
+    });
+
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        body: { error: "direct failed" },
+        event: "api.response.error",
+        status: 500,
+      }),
+    );
   });
 });

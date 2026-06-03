@@ -29,6 +29,7 @@ describe("RequestScheduler", () => {
     const scheduler = new RequestScheduler({
       concurrency: 1,
       logger: {
+        debug: () => undefined,
         error: () => undefined,
         info: () => undefined,
         warn: (event) => {
@@ -73,5 +74,38 @@ describe("RequestScheduler", () => {
 
     expect(response.status).toBe(404);
     expect(attempts).toBe(1);
+  });
+
+  it("debug logs retryable response bodies before retrying", async () => {
+    const entries: unknown[] = [];
+    let attempts = 0;
+    const scheduler = new RequestScheduler({
+      concurrency: 1,
+      logger: {
+        debug: (event, _message, fields) => entries.push({ event, ...fields }),
+        error: () => undefined,
+        info: () => undefined,
+        warn: () => undefined,
+      },
+      maxRetries: 1,
+    });
+
+    const response = await scheduler.fetch("https://example.test", () => {
+      attempts += 1;
+      return Promise.resolve(
+        attempts === 1
+          ? Response.json({ error: "try again" }, { status: 500 })
+          : new Response("ok", { status: 200 }),
+      );
+    });
+
+    expect(await response.text()).toBe("ok");
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        body: { error: "try again" },
+        event: "api.response.error",
+        status: 500,
+      }),
+    );
   });
 });

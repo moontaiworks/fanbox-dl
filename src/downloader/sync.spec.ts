@@ -4,8 +4,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { FanboxApiError } from "../client.js";
 import type { ImagePost, PostSummary } from "../types.js";
 import { AssetDownloader } from "./asset.js";
+import type { Logger } from "./logger.js";
 import { RequestScheduler } from "./scheduler.js";
 import { syncCreator } from "./sync.js";
 
@@ -60,6 +62,15 @@ function summary(restricted = false, title = "Title"): PostSummary {
     title,
     updatedDatetime: "2026-05-27T21:17:41+09:00",
     user: { iconUrl: "", name: "Creator", userId: "1" },
+  };
+}
+
+function testLogger(entries: unknown[]): Logger {
+  return {
+    debug: (event, _message, fields) => entries.push({ event, ...fields }),
+    error: (event, _message, fields) => entries.push({ event, ...fields }),
+    info: () => undefined,
+    warn: () => undefined,
   };
 }
 
@@ -262,5 +273,74 @@ describe("syncCreator", () => {
         "utf8",
       ),
     ).resolves.toBe("asset");
+  });
+
+  it("debug logs post info API error responses", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    const entries: unknown[] = [];
+    const client = {
+      getPost: () =>
+        Promise.reject(
+          new FanboxApiError(
+            Response.json({ error: "post failed" }, { status: 403 }),
+            { error: "post failed" },
+          ),
+        ),
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+
+    await syncCreator({
+      assetDownloader: new AssetDownloader({
+        scheduler: new RequestScheduler({ concurrency: 1 }),
+      }),
+      client,
+      creatorId: "creator",
+      logger: testLogger(entries),
+      outputDirectory: directory,
+    });
+
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        body: { error: "post failed" },
+        event: "api.response.error",
+        postId: "123",
+        status: 403,
+      }),
+    );
+  });
+
+  it("debug logs asset response bodies when downloads fail", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    const entries: unknown[] = [];
+    const client = {
+      getPost: () => Promise.resolve(post()),
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      fetch: () =>
+        Promise.resolve(
+          Response.json({ error: "asset failed" }, { status: 403 }),
+        ),
+      scheduler: new RequestScheduler({ concurrency: 1, maxRetries: 0 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      logger: testLogger(entries),
+      outputDirectory: directory,
+    });
+
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        body: { error: "asset failed" },
+        event: "api.response.error",
+        postId: "123",
+        status: 403,
+      }),
+    );
   });
 });

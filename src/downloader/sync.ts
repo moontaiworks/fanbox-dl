@@ -18,6 +18,7 @@ import type {
 } from "../types.js";
 import type { AssetDownloader } from "./asset.js";
 import { type CreatorPostClient, discoverCreatorPosts } from "./discovery.js";
+import { logDebugErrorResponse } from "./errors.js";
 import { type Logger, silentLogger } from "./logger.js";
 import {
   type AssetManifestEntry,
@@ -322,6 +323,11 @@ async function syncPost(
             postId: summary.id,
           });
         } catch (error) {
+          logDebugErrorResponse(logger, error, {
+            assetId: asset.key,
+            creatorId: options.creatorId,
+            postId: summary.id,
+          });
           assetEntry.error = String(error);
           assetEntry.status = "failed";
           logger.error("asset.download.failed", "Asset download failed", {
@@ -352,6 +358,10 @@ async function syncPost(
       : "complete";
     entry.updatedDatetime = summary.updatedDatetime;
   } catch (error) {
+    logDebugErrorResponse(logger, error, {
+      creatorId: options.creatorId,
+      postId: summary.id,
+    });
     entry.error = String(error);
     entry.status = "failed";
     logger.error("post.sync.failed", "Post sync failed", {

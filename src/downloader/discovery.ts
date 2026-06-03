@@ -3,6 +3,7 @@ import type {
   PaginateCreatorPostsParams,
   PostSummary,
 } from "../types.js";
+import { logDebugErrorResponse } from "./errors.js";
 import type { Logger } from "./logger.js";
 import { silentLogger } from "./logger.js";
 
@@ -37,6 +38,7 @@ export async function discoverCreatorPosts(
     try {
       page = await client.listCreatorPosts(cursor);
     } catch (error) {
+      logDebugErrorResponse(logger, error, { creatorId });
       logger.warn(
         "post.discovery.fallback",
         "Direct cursor failed; using paginateCreator",
