@@ -5,6 +5,12 @@
   "author": "moontai0724",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "fanbox-dl": "./dist/esm/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/bundle/index.cjs",
   "module": "./dist/bundle/index.js",
   "types": "./dist/bundle/index.d.ts",

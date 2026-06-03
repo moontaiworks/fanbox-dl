@@ -46,6 +46,45 @@ The SDK also provides `listHomePosts()` and `listSupportingPosts()` for
 authenticated timelines. It intentionally exposes read-only endpoints: it does
 not follow creators, like posts, or create comments.
 
+## CLI Downloader
+
+Install the package globally or run it through your package manager:
+
+```bash
+npx @moontaiworks/fanbox-dl download \
+  --following \
+  --supporting \
+  --ignore-creator creator-to-skip \
+  --output ./fanbox-downloads
+```
+
+The downloader stores each post as `summary.json`, `metadata.json`,
+`content.md`, and an `assets/` directory. It keeps a per-creator
+`manifest.json`, skips unchanged posts, resumes `.part` files with HTTP Range
+requests when supported, and can verify existing SHA-256 hashes:
+
+```bash
+fanbox-dl download --creator creator-id --verify-assets
+```
+
+Authenticated downloads read `FANBOX_SESSION_ID` by default. You can override
+it with `--cookie-file` or `--cookie`. Passing `--cookie` is convenient but may
+leave the session value in shell history.
+
+Useful request controls:
+
+```bash
+fanbox-dl download \
+  --supporting \
+  --concurrency 3 \
+  --request-interval-ms 1000 \
+  --rate-limit-pause-ms 60000 \
+  --max-retries 5
+```
+
+Logs use JSON Lines by default. Add `--log-format pretty` for interactive use.
+When FANBOX responds with HTTP 429, all new requests pause before retrying.
+
 ## Documentation
 
 API documentation is automatically generated using [TypeDoc](https://typedoc.org/) and published to GitHub Pages.
