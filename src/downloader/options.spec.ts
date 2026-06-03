@@ -1,3 +1,7 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { CliUsageError, parseDownloadOptions } from "./options.js";
@@ -55,6 +59,27 @@ describe("parseDownloadOptions", () => {
     );
 
     expect(options.cookie).toBe("FANBOXSESSID=explicit");
+  });
+
+  it("loads FANBOX cookies from a Netscape cookies file", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-options-"));
+    const cookieFile = path.join(directory, "cookies.txt");
+    await writeFile(
+      cookieFile,
+      [
+        "# Netscape HTTP Cookie File",
+        ".fanbox.cc\tTRUE\t/\tTRUE\t2147483647\tcf_clearance\tclearance",
+        "www.fanbox.cc\tFALSE\t/\tTRUE\t2147483647\tFANBOXSESSID\tsession",
+        ".example.test\tTRUE\t/\tTRUE\t2147483647\tignored\tnope",
+      ].join("\n"),
+    );
+
+    const options = parseDownloadOptions(
+      ["download", "--creator", "alpha", "--cookie-file", cookieFile],
+      {},
+    );
+
+    expect(options.cookie).toBe("cf_clearance=clearance; FANBOXSESSID=session");
   });
 
   it("parses user agent from option before environment", () => {

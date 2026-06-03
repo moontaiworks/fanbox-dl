@@ -26,7 +26,7 @@ Selectors:
 
 Auth:
   --cookie <value>          Raw session ID or FANBOXSESSID=... cookie.
-  --cookie-file <path>      Read session value from a file.
+  --cookie-file <path>      Read raw cookie or Netscape cookies.txt.
   --user-agent <value>      Send the User-Agent from your logged-in browser.
   FANBOX_SESSION_ID         Environment fallback.
   FANBOX_USER_AGENT         User-Agent environment fallback.

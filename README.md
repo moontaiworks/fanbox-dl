@@ -84,13 +84,15 @@ browser session that produced your cookie:
 ```bash
 fanbox-dl download \
   --creator creator-id \
-  --cookie-file ./fanbox-cookie.txt \
+  --cookie-file ./cookies.txt \
   --user-agent "Mozilla/5.0 ..."
 ```
 
-`--cookie` and `--cookie-file` may contain a full Cookie header, for example
-`FANBOXSESSID=...; cf_clearance=...`, when those values come from your own
-logged-in browser session.
+`--cookie-file` accepts either a raw cookie value or a Netscape cookies.txt
+export from your own logged-in browser session. When using cookies.txt, FANBOX
+cookies such as `FANBOXSESSID` and `cf_clearance` are selected automatically.
+`--cookie` may also contain a full Cookie header, for example
+`FANBOXSESSID=...; cf_clearance=...`.
 
 Useful request controls:
 
