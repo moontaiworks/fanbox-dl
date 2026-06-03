@@ -1,3 +1,8 @@
+import {
+  Http2Transport,
+  type HttpResponse,
+  type HttpTransport,
+} from "./http.js";
 import type {
   Creator,
   CreatorSummary,
@@ -22,7 +27,7 @@ export class FanboxApiError extends Error {
   public readonly status: number;
   public readonly statusText: string;
 
-  public constructor(response: Response, body: unknown) {
+  public constructor(response: HttpResponse, body: unknown) {
     super(
       `FANBOX API request failed: ${response.status} ${response.statusText}`,
     );
@@ -36,12 +41,14 @@ export class FanboxApiError extends Error {
 export class FanboxClient {
   readonly #baseUrl: string;
   readonly #cookie?: string;
-  readonly #fetch: typeof globalThis.fetch;
+  readonly #transport: HttpTransport;
+  readonly #userAgent: string;
 
   public constructor(options: FanboxClientOptions = {}) {
     this.#baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
     this.#cookie = options.cookie;
-    this.#fetch = options.fetch ?? globalThis.fetch;
+    this.#transport = options.transport ?? new Http2Transport();
+    this.#userAgent = options.userAgent ?? randomUserAgent();
   }
 
   public getCreator(params: GetCreatorParams): Promise<Creator> {
@@ -98,25 +105,41 @@ export class FanboxClient {
     }
 
     const headers: Record<string, string> = {
+      Accept: "application/json, text/plain, */*",
       Origin: "https://www.fanbox.cc",
-      "User-Agent": `${Math.random().toString(36).substring(2, 15)}/${Math.random().toFixed(5)}`,
+      Referer: "https://www.fanbox.cc/",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-site",
+      "User-Agent": this.#userAgent,
     };
     if (this.#cookie !== undefined) {
       headers.Cookie = this.#cookie;
     }
 
-    const response = await this.#fetch(url, {
+    const response = await this.#transport.request({
       headers,
       method: "GET",
+      url,
     });
-    const body: unknown = await response
-      .clone()
-      .json()
-      .catch(async () => response.text());
+    const body = await readResponseBody(response);
     if (!response.ok) {
       throw new FanboxApiError(response, body);
     }
 
     return (body as FanboxEnvelope<T>).body;
+  }
+}
+
+function randomUserAgent(): string {
+  return `${Math.random().toString(36).substring(2, 15)}/${Math.random().toFixed(5)}`;
+}
+
+async function readResponseBody(response: HttpResponse): Promise<unknown> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
   }
 }

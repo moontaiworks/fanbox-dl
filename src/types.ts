@@ -96,7 +96,8 @@ export interface CreatorSummary {
 export interface FanboxClientOptions {
   baseUrl?: string;
   cookie?: string;
-  fetch?: typeof globalThis.fetch;
+  transport?: HttpTransport;
+  userAgent?: string;
 }
 
 export interface FanboxEnvelope<T> {
@@ -270,3 +271,4 @@ interface PostBase extends Omit<PostSummary, "cover"> {
   prevPost: NeighboringPost | null;
   type: string;
 }
+import type { HttpTransport } from "./http.js";

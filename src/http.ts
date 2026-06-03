@@ -9,7 +9,7 @@ const HTTP2_HEADER_STATUS = ":status";
 
 export interface HttpRequest {
   body?: BodyInit | undefined;
-  headers?: HeadersInit;
+  headers?: Headers | Record<string, string>;
   method?: string;
   url: string | URL;
 }
@@ -31,7 +31,7 @@ export interface HttpTransport {
 
 interface NormalizedHttpRequest {
   body: BodyInit | undefined;
-  headers: HeadersInit | undefined;
+  headers: Headers | Record<string, string> | undefined;
   method: string;
   url: URL;
 }
