@@ -103,17 +103,17 @@ async function archiveObsoleteAssets(
 
 function assetPath(
   postDirectory: string,
+  index: number,
   name: string,
   extension: string,
 ): string {
   const safeExtension = sanitizePathComponent(extension, { maxBytes: 16 });
-  return path.posix.join(
-    "assets",
-    sanitizePathComponentForDirectory(
-      name,
-      path.join(postDirectory, "assets"),
-      { suffix: `.${safeExtension}` },
-    ),
+  const postDirectoryName = path.basename(postDirectory);
+  const sequence = String(index).padStart(2, "0");
+  return sanitizePathComponentForDirectory(
+    `${postDirectoryName}_${sequence}_${name}`,
+    postDirectory,
+    { suffix: `.${safeExtension}` },
   );
 }
 
@@ -134,6 +134,7 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
       key: "cover",
       relativePath: assetPath(
         postDirectory,
+        assets.length,
         `cover_${post.id}`,
         extensionFromUrl(post.coverImageUrl, "jpg"),
       ),
@@ -146,6 +147,7 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
         key: `image:${image.id}`,
         relativePath: assetPath(
           postDirectory,
+          assets.length,
           `image_${image.id}`,
           image.extension,
         ),
@@ -159,6 +161,7 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
         key: `file:${file.id}`,
         relativePath: assetPath(
           postDirectory,
+          assets.length,
           `file_${file.id}_${file.name}`,
           file.extension,
         ),
@@ -173,6 +176,7 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
         key: `image:${image.id}`,
         relativePath: assetPath(
           postDirectory,
+          assets.length,
           `image_${image.id}`,
           image.extension,
         ),
@@ -184,6 +188,7 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
         key: `file:${file.id}`,
         relativePath: assetPath(
           postDirectory,
+          assets.length,
           `file_${file.id}_${file.name}`,
           file.extension,
         ),
@@ -193,6 +198,30 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
   }
 
   return assets;
+}
+
+async function moveExistingAsset(
+  creatorDirectory: string,
+  existing: AssetManifestEntry,
+  manifestPath: string,
+): Promise<boolean> {
+  if (existing.path === manifestPath) {
+    return exists(path.join(creatorDirectory, existing.path));
+  }
+
+  const source = path.join(creatorDirectory, existing.path);
+  const destination = path.join(creatorDirectory, manifestPath);
+  if (await exists(destination)) {
+    existing.path = manifestPath;
+    return true;
+  }
+  if (!(await exists(source))) {
+    return false;
+  }
+
+  await rename(source, destination);
+  existing.path = manifestPath;
+  return true;
 }
 
 async function syncPost(
@@ -263,10 +292,9 @@ async function syncPost(
       !options.verifyAssets ||
       (await verifyAssets(creatorDirectory, entry))
     ) {
-      if (renamed) {
-        await store.save(manifest);
+      if (!renamed) {
+        return;
       }
-      return;
     }
     entry.status = "pending";
   }
@@ -288,7 +316,7 @@ async function syncPost(
           if (
             existing?.status === "complete" &&
             existing.url === asset.url &&
-            (await exists(path.join(creatorDirectory, existing.path)))
+            (await moveExistingAsset(creatorDirectory, existing, manifestPath))
           ) {
             return undefined;
           }

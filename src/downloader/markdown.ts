@@ -30,7 +30,8 @@ export function renderPostMarkdown(post: Post, paths: AssetPathMap): string {
       content = [
         imagePost.body.text,
         ...imagePost.body.images.map(
-          (image) => `![${image.id}](${assetLink(paths, `image:${image.id}`)})`,
+          (image) =>
+            `![${image.id}](./${assetLink(paths, `image:${image.id}`)})`,
         ),
       ].join("\n\n");
       break;

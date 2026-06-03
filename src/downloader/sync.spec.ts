@@ -137,7 +137,9 @@ describe("syncCreator", () => {
     );
     await expect(
       readFile(path.join(postDirectory, "content.md"), "utf8"),
-    ).resolves.toContain("![image-id](assets/image_image-id.png)");
+    ).resolves.toContain(
+      "![image-id](./2026-05-27_123_Title_01_image_image-id.png)",
+    );
     await expect(
       readFile(path.join(postDirectory, "metadata.json"), "utf8"),
     ).resolves.toContain('"type": "image"');
@@ -205,8 +207,7 @@ describe("syncCreator", () => {
       "creator",
       "posts",
       "2026-05-27_123_Title",
-      "assets",
-      "image_image-id.png",
+      "2026-05-27_123_Title_01_image_image-id.png",
     );
     await writeFile(assetPath, "corrupted");
     await syncCreator({
@@ -262,8 +263,32 @@ describe("syncCreator", () => {
     await expect(
       readFile(path.join(directory, "creator", "manifest.json"), "utf8"),
     ).resolves.toContain(
-      "posts/2026-05-27_123_Renamed/assets/image_image-id.png",
+      "posts/2026-05-27_123_Renamed/2026-05-27_123_Renamed_01_image_image-id.png",
     );
+    await expect(
+      readFile(
+        path.join(
+          directory,
+          "creator",
+          "posts",
+          "2026-05-27_123_Renamed",
+          "2026-05-27_123_Renamed_01_image_image-id.png",
+        ),
+        "utf8",
+      ),
+    ).resolves.toBe("https://example.test/image.png");
+    await expect(
+      readFile(
+        path.join(
+          directory,
+          "creator",
+          "posts",
+          "2026-05-27_123_Renamed",
+          "2026-05-27_123_Title_01_image_image-id.png",
+        ),
+        "utf8",
+      ),
+    ).rejects.toThrow();
   });
 
   it("sanitizes asset extensions before using them in file names", async () => {
@@ -295,8 +320,7 @@ describe("syncCreator", () => {
           "creator",
           "posts",
           "2026-05-27_123_Title",
-          "assets",
-          "image_image-id.p_ng",
+          "2026-05-27_123_Title_01_image_image-id.p_ng",
         ),
         "utf8",
       ),

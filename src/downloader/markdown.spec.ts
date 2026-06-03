@@ -51,7 +51,7 @@ describe("renderPostMarkdown", () => {
         post,
         new Map([["image:image-id", "assets/image.png"]]),
       ),
-    ).toContain("![image-id](assets/image.png)");
+    ).toContain("![image-id](./assets/image.png)");
   });
 
   it("renders article blocks in source order", () => {
