@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "fanbox-dl": "./dist/esm/cli.js"
+    "fanbox-dl": "./dist/esm/downloader/index.js"
   },
   "engines": {
     "node": ">=20"
