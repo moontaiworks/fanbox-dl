@@ -80,7 +80,6 @@ export async function runCli(
     const client = new FanboxClient({
       cookie: options.cookie,
       fetch: (input, init) => scheduler.fetch(input, fetch, init),
-      userAgent: options.userAgent,
     });
     const creatorIds = await resolveCreatorIds(client, options);
     if (options.dryRun) {

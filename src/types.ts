@@ -97,7 +97,6 @@ export interface FanboxClientOptions {
   baseUrl?: string;
   cookie?: string;
   fetch?: typeof globalThis.fetch;
-  userAgent?: string;
 }
 
 export interface FanboxEnvelope<T> {
