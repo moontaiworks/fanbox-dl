@@ -35,7 +35,7 @@ impl HttpRequest {
     }
 
     #[must_use]
-    pub fn with_query<T: Serialize>(mut self, query: &T) -> Self {
+    pub fn with_query<T: Serialize + ?Sized>(mut self, query: &T) -> Self {
         let query = serde_urlencoded::to_string(query).expect("serializable query");
         if !query.is_empty() {
             self.url.set_query(Some(&query));
@@ -101,12 +101,12 @@ impl HttpClient for ReqwestHttpClient {
         builder = builder.headers(request.headers);
         let response = builder.send().await.context("request failed")?;
         let status = response.status();
-        let status_text = status
-            .canonical_reason()
-            .unwrap_or_default()
-            .to_string();
+        let status_text = status.canonical_reason().unwrap_or_default().to_string();
         let headers = response.headers().clone();
-        let body = response.bytes().await.context("failed to read response body")?;
+        let body = response
+            .bytes()
+            .await
+            .context("failed to read response body")?;
         Ok(HttpResponse {
             body: body.to_vec(),
             headers,

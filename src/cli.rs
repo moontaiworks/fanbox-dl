@@ -8,5 +8,10 @@ where
     T: Into<OsString>,
 {
     let values = args.into_iter().map(Into::into).collect::<Vec<_>>();
-    crate::downloader::cli::run_cli(values.into_iter().skip(1).collect(), std::env::vars().collect::<HashMap<_, _>>(), None, Arc::new(|line| eprintln!("{line}")))
+    crate::downloader::cli::run_cli(
+        values.into_iter().skip(1).collect(),
+        std::env::vars().collect::<HashMap<_, _>>(),
+        None,
+        Arc::new(|line| eprintln!("{line}")),
+    )
 }

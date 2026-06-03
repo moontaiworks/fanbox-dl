@@ -43,7 +43,11 @@ impl RequestScheduler {
             Arc::new(|| chrono::Utc::now().timestamp_millis() as u64),
             60_000,
             0,
-            Arc::new(|milliseconds| Box::pin(tokio::time::sleep(std::time::Duration::from_millis(milliseconds)))),
+            Arc::new(|milliseconds| {
+                Box::pin(tokio::time::sleep(std::time::Duration::from_millis(
+                    milliseconds,
+                )))
+            }),
         )
     }
 
@@ -84,7 +88,11 @@ impl RequestScheduler {
         F: FnOnce() -> Fut,
         Fut: Future<Output = T>,
     {
-        let _permit = self.semaphore.acquire().await.expect("semaphore should remain open");
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .expect("semaphore should remain open");
         self.wait_to_start().await;
         operation().await
     }
@@ -96,24 +104,41 @@ impl RequestScheduler {
     {
         let mut attempt = 0;
         loop {
-            match self.run(|| operation()).await {
-                Ok(response) if !is_retryable_status(response.status) || attempt >= self.max_retries => return Ok(response),
+            match self.run(&operation).await {
+                Ok(response)
+                    if !is_retryable_status(response.status) || attempt >= self.max_retries =>
+                {
+                    return Ok(response);
+                }
                 Ok(response) => {
-                    log_debug_response(&self.logger, &response, LogFields::from_iter([(String::from("attempt"), json!(attempt + 1))]));
+                    log_debug_response(
+                        &self.logger,
+                        &response,
+                        LogFields::from_iter([(String::from("attempt"), json!(attempt + 1))]),
+                    );
                     if response.status == 429 {
-                        let pause_ms = parse_retry_after(&response, (self.now)()).unwrap_or(self.rate_limit_pause_ms);
+                        let pause_ms = parse_retry_after(&response, (self.now)())
+                            .unwrap_or(self.rate_limit_pause_ms);
                         {
                             let mut state = self.state.lock().await;
                             state.paused_until = state.paused_until.max((self.now)() + pause_ms);
                         }
-                        self.logger.warn("request.rate-limit.pause", "Rate limit reached; pausing requests", LogFields::from_iter([(String::from("pauseMs"), json!(pause_ms))]));
+                        self.logger.warn(
+                            "request.rate-limit.pause",
+                            "Rate limit reached; pausing requests",
+                            LogFields::from_iter([(String::from("pauseMs"), json!(pause_ms))]),
+                        );
                     }
                 }
                 Err(error) if attempt >= self.max_retries => return Err(error),
                 Err(_) => {}
             }
             attempt += 1;
-            self.logger.warn("request.retry", "Retrying request", LogFields::from_iter([(String::from("attempt"), json!(attempt))]));
+            self.logger.warn(
+                "request.retry",
+                "Retrying request",
+                LogFields::from_iter([(String::from("attempt"), json!(attempt))]),
+            );
         }
     }
 
@@ -122,7 +147,10 @@ impl RequestScheduler {
             let now = (self.now)();
             let delay = {
                 let mut state = self.state.lock().await;
-                let delay = state.paused_until.max(state.next_start_at).saturating_sub(now);
+                let delay = state
+                    .paused_until
+                    .max(state.next_start_at)
+                    .saturating_sub(now);
                 if delay == 0 {
                     state.next_start_at = now + self.request_interval_ms;
                 }
@@ -178,16 +206,18 @@ mod tests {
             let active = Arc::clone(&active);
             let maximum = Arc::clone(&maximum);
             tokio::spawn(async move {
-                scheduler.run(|| async move {
-                    {
-                        let mut active = active.lock().unwrap();
-                        *active += 1;
-                        let mut maximum = maximum.lock().unwrap();
-                        *maximum = (*maximum).max(*active);
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-                    *active.lock().unwrap() -= 1;
-                }).await;
+                scheduler
+                    .run(|| async move {
+                        {
+                            let mut active = active.lock().unwrap();
+                            *active += 1;
+                            let mut maximum = maximum.lock().unwrap();
+                            *maximum = (*maximum).max(*active);
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                        *active.lock().unwrap() -= 1;
+                    })
+                    .await;
             })
         });
         futures::future::join_all(operations).await;
@@ -199,18 +229,28 @@ mod tests {
         let sleeps = Arc::new(Mutex::new(Vec::new()));
         let events = Arc::new(Mutex::new(Vec::new()));
         let now = Arc::new(Mutex::new(0u64));
-        let logger = Logger::new(LogFormat::Json, LogLevel::Debug, Arc::new({
-            let events = Arc::clone(&events);
-            move |line| {
-                let value: serde_json::Value = serde_json::from_str(&line).unwrap();
-                events.lock().unwrap().push(value["event"].as_str().unwrap().to_string());
-            }
-        }));
+        let logger = Logger::new(
+            LogFormat::Json,
+            LogLevel::Debug,
+            Arc::new({
+                let events = Arc::clone(&events);
+                move |line| {
+                    let value: serde_json::Value = serde_json::from_str(&line).unwrap();
+                    events
+                        .lock()
+                        .unwrap()
+                        .push(value["event"].as_str().unwrap().to_string());
+                }
+            }),
+        );
         let scheduler = RequestScheduler::with_hooks(
             1,
             logger,
             5,
-            Arc::new({ let now = Arc::clone(&now); move || *now.lock().unwrap() }),
+            Arc::new({
+                let now = Arc::clone(&now);
+                move || *now.lock().unwrap()
+            }),
             60_000,
             0,
             Arc::new({
@@ -227,27 +267,36 @@ mod tests {
             }),
         );
         let attempts = Arc::new(Mutex::new(0));
-        let response = scheduler.fetch({
-            let attempts = Arc::clone(&attempts);
-            move || {
+        let response = scheduler
+            .fetch({
                 let attempts = Arc::clone(&attempts);
-                async move {
-                    let mut attempts = attempts.lock().unwrap();
-                    *attempts += 1;
-                    if *attempts == 1 {
-                        let mut response = response(429, "");
-                        response.headers.insert("Retry-After", "2".parse().unwrap());
-                        Ok(response)
-                    } else {
-                        Ok(response(200, "ok"))
+                move || {
+                    let attempts = Arc::clone(&attempts);
+                    async move {
+                        let mut attempts = attempts.lock().unwrap();
+                        *attempts += 1;
+                        if *attempts == 1 {
+                            let mut response = response(429, "");
+                            response.headers.insert("Retry-After", "2".parse().unwrap());
+                            Ok(response)
+                        } else {
+                            Ok(response(200, "ok"))
+                        }
                     }
                 }
-            }
-        }).await?;
+            })
+            .await?;
         assert_eq!(response.text(), "ok");
         assert_eq!(*attempts.lock().unwrap(), 2);
         assert!(sleeps.lock().unwrap().contains(&2_000));
-        assert_eq!(&*events.lock().unwrap(), &["api.response.error", "request.rate-limit.pause", "request.retry"]);
+        assert_eq!(
+            &*events.lock().unwrap(),
+            &[
+                "api.response.error",
+                "request.rate-limit.pause",
+                "request.retry"
+            ]
+        );
         Ok(())
     }
 
@@ -255,16 +304,18 @@ mod tests {
     async fn does_not_retry_non_rate_limited_client_error() -> Result<()> {
         let scheduler = RequestScheduler::new(1);
         let attempts = Arc::new(Mutex::new(0));
-        let response = scheduler.fetch({
-            let attempts = Arc::clone(&attempts);
-            move || {
+        let response = scheduler
+            .fetch({
                 let attempts = Arc::clone(&attempts);
-                async move {
-                    *attempts.lock().unwrap() += 1;
-                    Ok(response(404, ""))
+                move || {
+                    let attempts = Arc::clone(&attempts);
+                    async move {
+                        *attempts.lock().unwrap() += 1;
+                        Ok(response(404, ""))
+                    }
                 }
-            }
-        }).await?;
+            })
+            .await?;
         assert_eq!(response.status, 404);
         assert_eq!(*attempts.lock().unwrap(), 1);
         Ok(())
@@ -273,10 +324,14 @@ mod tests {
     #[tokio::test]
     async fn debug_logs_retryable_response_bodies() -> Result<()> {
         let entries = Arc::new(Mutex::new(Vec::new()));
-        let logger = Logger::new(LogFormat::Json, LogLevel::Debug, Arc::new({
-            let entries = Arc::clone(&entries);
-            move |line| entries.lock().unwrap().push(line)
-        }));
+        let logger = Logger::new(
+            LogFormat::Json,
+            LogLevel::Debug,
+            Arc::new({
+                let entries = Arc::clone(&entries);
+                move |line| entries.lock().unwrap().push(line)
+            }),
+        );
         let scheduler = RequestScheduler::with_hooks(
             1,
             logger,
@@ -287,22 +342,35 @@ mod tests {
             Arc::new(|_| Box::pin(async {})),
         );
         let attempts = Arc::new(Mutex::new(0));
-        let response = scheduler.fetch({
-            let attempts = Arc::clone(&attempts);
-            move || {
+        let response = scheduler
+            .fetch({
                 let attempts = Arc::clone(&attempts);
-                async move {
-                    *attempts.lock().unwrap() += 1;
-                    if *attempts.lock().unwrap() == 1 {
-                        Ok(HttpResponse { body: br#"{"error":"try again"}"#.to_vec(), headers: HeaderMap::new(), status: 500, status_text: String::new() })
-                    } else {
-                        Ok(response(200, "ok"))
+                move || {
+                    let attempts = Arc::clone(&attempts);
+                    async move {
+                        *attempts.lock().unwrap() += 1;
+                        if *attempts.lock().unwrap() == 1 {
+                            Ok(HttpResponse {
+                                body: br#"{"error":"try again"}"#.to_vec(),
+                                headers: HeaderMap::new(),
+                                status: 500,
+                                status_text: String::new(),
+                            })
+                        } else {
+                            Ok(response(200, "ok"))
+                        }
                     }
                 }
-            }
-        }).await?;
+            })
+            .await?;
         assert_eq!(response.text(), "ok");
-        assert!(entries.lock().unwrap().iter().any(|line| line.contains("try again")));
+        assert!(
+            entries
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|line| line.contains("try again"))
+        );
         Ok(())
     }
 }

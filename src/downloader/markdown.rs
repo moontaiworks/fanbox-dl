@@ -11,7 +11,13 @@ pub fn render_post_markdown(post: &Post, paths: &HashMap<String, String>) -> Str
             || format!("[unsupported post type: {}]", post.post_type),
             |body| {
                 std::iter::once(body.text)
-                    .chain(body.files.into_iter().map(|file| format!("[{}]({})", file.name, asset_link(paths, &format!("file:{}", file.id)))))
+                    .chain(body.files.into_iter().map(|file| {
+                        format!(
+                            "[{}]({})",
+                            file.name,
+                            asset_link(paths, &format!("file:{}", file.id))
+                        )
+                    }))
                     .collect::<Vec<_>>()
                     .join("\n\n")
             },
@@ -20,15 +26,26 @@ pub fn render_post_markdown(post: &Post, paths: &HashMap<String, String>) -> Str
             || format!("[unsupported post type: {}]", post.post_type),
             |body| {
                 std::iter::once(body.text)
-                    .chain(body.images.into_iter().map(|image| format!("![{}]({})", image.id, asset_link(paths, &format!("image:{}", image.id)))))
+                    .chain(body.images.into_iter().map(|image| {
+                        format!(
+                            "![{}]({})",
+                            image.id,
+                            asset_link(paths, &format!("image:{}", image.id))
+                        )
+                    }))
                     .collect::<Vec<_>>()
                     .join("\n\n")
             },
         ),
-        "text" => post.text_body().map_or_default(|body| body.text),
+        "text" => post.text_body().map_or_else(String::new, |body| body.text),
         "video" => post.video_body().map_or_else(
             || format!("[unsupported post type: {}]", post.post_type),
-            |body| format!("{}\n\n{}: {}", body.text, body.video.service_provider, body.video.video_id),
+            |body| {
+                format!(
+                    "{}\n\n{}: {}",
+                    body.text, body.video.service_provider, body.video.video_id
+                )
+            },
         ),
         _ => format!("[unsupported post type: {}]", post.post_type),
     };
@@ -49,11 +66,24 @@ fn render_article(post: &Post, paths: &HashMap<String, String>) -> String {
     body.blocks
         .into_iter()
         .map(|block| match block {
-            ArticleBlock::File { file_id } => format!("[{file_id}]({})", asset_link(paths, &format!("file:{file_id}"))),
+            ArticleBlock::File { file_id } => format!(
+                "[{file_id}]({})",
+                asset_link(paths, &format!("file:{file_id}"))
+            ),
             ArticleBlock::Header { text } => format!("# {text}"),
-            ArticleBlock::Image { image_id } => format!("![{image_id}]({})", asset_link(paths, &format!("image:{image_id}"))),
+            ArticleBlock::Image { image_id } => format!(
+                "![{image_id}]({})",
+                asset_link(paths, &format!("image:{image_id}"))
+            ),
             ArticleBlock::Paragraph { text } => text,
-            ArticleBlock::UrlEmbed { url_embed_id } => body.url_embed_map.get(&url_embed_id).cloned().unwrap_or(Value::String(url_embed_id)).to_string().trim_matches('"').to_string(),
+            ArticleBlock::UrlEmbed { url_embed_id } => body
+                .url_embed_map
+                .get(&url_embed_id)
+                .cloned()
+                .unwrap_or(Value::String(url_embed_id))
+                .to_string()
+                .trim_matches('"')
+                .to_string(),
             ArticleBlock::Unknown => "[unsupported block: unknown]".to_string(),
         })
         .collect::<Vec<_>>()
@@ -114,14 +144,18 @@ mod tests {
         let post: Post = serde_json::from_value(value).unwrap();
         let mut paths = HashMap::new();
         paths.insert("image:image-id".into(), "assets/image.png".into());
-        assert!(render_post_markdown(&post, &paths).contains("# Header\n\nParagraph\n\n![image-id](assets/image.png)"));
+        assert!(
+            render_post_markdown(&post, &paths)
+                .contains("# Header\n\nParagraph\n\n![image-id](assets/image.png)")
+        );
     }
 
     #[test]
     fn renders_video_details() {
         let mut value = base_post();
         value["type"] = json!("video");
-        value["body"] = json!({ "text": "Watch", "video": { "serviceProvider": "youtube", "videoId": "abc" } });
+        value["body"] =
+            json!({ "text": "Watch", "video": { "serviceProvider": "youtube", "videoId": "abc" } });
         let post: Post = serde_json::from_value(value).unwrap();
         assert!(render_post_markdown(&post, &HashMap::new()).contains("youtube: abc"));
     }

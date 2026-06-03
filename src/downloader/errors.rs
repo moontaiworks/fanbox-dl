@@ -4,7 +4,11 @@ use crate::http::HttpResponse;
 
 use super::logger::{LogFields, Logger};
 
-pub fn log_debug_error_response(logger: &Logger, error: &(dyn std::error::Error + 'static), mut fields: LogFields) {
+pub fn log_debug_error_response(
+    logger: &Logger,
+    error: &(dyn std::error::Error + 'static),
+    mut fields: LogFields,
+) {
     if let Some(response) = error.downcast_ref::<crate::client::FanboxApiError>() {
         fields.insert("body".into(), response.body.clone());
         fields.insert("status".into(), json!(response.status));

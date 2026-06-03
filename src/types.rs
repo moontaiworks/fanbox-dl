@@ -90,13 +90,7 @@ pub struct Plan {
     pub user: FanboxUser,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SupportingPlan {
-    #[serde(flatten)]
-    pub plan: Plan,
-    #[serde(rename = "paymentMethod")]
-    pub payment_method: String,
-}
+pub type SupportingPlan = Plan;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PostCover {
@@ -172,7 +166,11 @@ pub struct PostListParams {
     pub limit: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxId")]
     pub max_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxPublishedDatetime")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "maxPublishedDatetime"
+    )]
     pub max_published_datetime: Option<String>,
 }
 
@@ -189,7 +187,11 @@ pub struct ListCreatorPostsParams {
     pub creator_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "firstId")]
     pub first_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "firstPublishedDatetime")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "firstPublishedDatetime"
+    )]
     pub first_published_datetime: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<u64>,
@@ -311,15 +313,24 @@ pub struct ArticlePostBody {
 #[serde(tag = "type")]
 pub enum ArticleBlock {
     #[serde(rename = "file")]
-    File { #[serde(rename = "fileId")] file_id: String },
+    File {
+        #[serde(rename = "fileId")]
+        file_id: String,
+    },
     #[serde(rename = "header")]
     Header { text: String },
     #[serde(rename = "image")]
-    Image { #[serde(rename = "imageId")] image_id: String },
+    Image {
+        #[serde(rename = "imageId")]
+        image_id: String,
+    },
     #[serde(rename = "p")]
     Paragraph { text: String },
     #[serde(rename = "url_embed")]
-    UrlEmbed { #[serde(rename = "urlEmbedId")] url_embed_id: String },
+    UrlEmbed {
+        #[serde(rename = "urlEmbedId")]
+        url_embed_id: String,
+    },
     #[serde(other)]
     Unknown,
 }

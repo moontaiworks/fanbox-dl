@@ -10,9 +10,9 @@ use url::Url;
 use crate::downloader::scheduler::RequestScheduler;
 use crate::http::{HttpClient, HttpRequest};
 use crate::types::{
-    Creator, CreatorSummary, FanboxEnvelope, GetCreatorParams, GetPostParams, ListCreatorPlansParams,
-    ListCreatorPostsParams, PaginateCreatorPostsParams, Plan, Post, PostListParams, PostSummary,
-    SupportingPlan,
+    Creator, CreatorSummary, FanboxEnvelope, GetCreatorParams, GetPostParams,
+    ListCreatorPlansParams, ListCreatorPostsParams, PaginateCreatorPostsParams, Plan, Post,
+    PostListParams, PostSummary, SupportingPlan,
 };
 
 const DEFAULT_BASE_URL: &str = "https://api.fanbox.cc";
@@ -26,7 +26,11 @@ pub struct FanboxApiError {
 
 impl Display for FanboxApiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "FANBOX API request failed: {} {}", self.status, self.status_text)
+        write!(
+            f,
+            "FANBOX API request failed: {} {}",
+            self.status, self.status_text
+        )
     }
 }
 
@@ -72,7 +76,10 @@ impl FanboxClient {
         self.get("plan.listCreator", &params).await
     }
 
-    pub async fn list_creator_posts(&self, params: ListCreatorPostsParams) -> Result<Vec<PostSummary>> {
+    pub async fn list_creator_posts(
+        &self,
+        params: ListCreatorPostsParams,
+    ) -> Result<Vec<PostSummary>> {
         self.get("post.listCreator", &params).await
     }
 
@@ -92,7 +99,10 @@ impl FanboxClient {
         self.get("post.listSupporting", &params).await
     }
 
-    pub async fn paginate_creator_posts(&self, params: PaginateCreatorPostsParams) -> Result<Vec<String>> {
+    pub async fn paginate_creator_posts(
+        &self,
+        params: PaginateCreatorPostsParams,
+    ) -> Result<Vec<String>> {
         self.get("post.paginateCreator", &params).await
     }
 
@@ -101,7 +111,10 @@ impl FanboxClient {
         Q: Serialize + ?Sized,
         T: DeserializeOwned,
     {
-        let url = self.base_url.join(path).context("failed to join FANBOX path")?;
+        let url = self
+            .base_url
+            .join(path)
+            .context("failed to join FANBOX path")?;
         let mut request = HttpRequest::get(url).with_query(query);
         request = request
             .header("accept", "application/json, text/plain, */*")
@@ -145,8 +158,11 @@ mod tests {
     use serde_json::json;
 
     use crate::downloader::scheduler::RequestScheduler;
-    use crate::http::{RecordingHttpClient, HttpResponse};
-    use crate::types::{GetCreatorParams, GetPostParams, ListCreatorPostsParams, PaginateCreatorPostsParams, PostSort, PostListParams};
+    use crate::http::{HttpResponse, RecordingHttpClient};
+    use crate::types::{
+        GetCreatorParams, GetPostParams, ListCreatorPostsParams, PaginateCreatorPostsParams,
+        PostListParams, PostSort,
+    };
 
     use super::{FanboxApiError, FanboxClient};
 
@@ -174,7 +190,9 @@ mod tests {
 
     #[tokio::test]
     async fn gets_creator_with_fanbox_headers() -> Result<()> {
-        let (client, http) = client_with_body(json!({ "creatorId": "alfabravo11", "category": "", "coverImageUrl": null, "description": "", "hasAdultContent": false, "hasBoothShop": false, "hasPublishedPost": false, "isAcceptingRequest": false, "isFollowed": false, "isStopped": false, "isSupported": false, "profileItems": [], "profileLinks": [], "user": { "iconUrl": "", "name": "", "userId": "1" } }));
+        let (client, http) = client_with_body(
+            json!({ "creatorId": "alfabravo11", "category": "", "coverImageUrl": null, "description": "", "hasAdultContent": false, "hasBoothShop": false, "hasPublishedPost": false, "isAcceptingRequest": false, "isFollowed": false, "isStopped": false, "isSupported": false, "profileItems": [], "profileLinks": [], "user": { "iconUrl": "", "name": "", "userId": "1" } }),
+        );
         let _ = client
             .get_creator(GetCreatorParams {
                 creator_id: "alfabravo11".into(),
@@ -182,9 +200,18 @@ mod tests {
             .await?;
         let requests = http.requests.lock().unwrap();
         assert_eq!(requests.len(), 1);
-        assert_eq!(requests[0].url.as_str(), "https://api.fanbox.cc/creator.get?creatorId=alfabravo11");
-        assert_eq!(requests[0].headers.get("accept").unwrap(), "application/json, text/plain, */*");
-        assert_eq!(requests[0].headers.get("cookie").unwrap(), "FANBOXSESSID=session-id");
+        assert_eq!(
+            requests[0].url.as_str(),
+            "https://api.fanbox.cc/creator.get?creatorId=alfabravo11"
+        );
+        assert_eq!(
+            requests[0].headers.get("accept").unwrap(),
+            "application/json, text/plain, */*"
+        );
+        assert_eq!(
+            requests[0].headers.get("cookie").unwrap(),
+            "FANBOXSESSID=session-id"
+        );
         Ok(())
     }
 
@@ -212,8 +239,17 @@ mod tests {
                 sort: Some(PostSort::Newest),
             })
             .await?;
-        assert_eq!(request_url(&http), "https://example.test/api/post.listCreator?creatorId=creator&firstId=123&firstPublishedDatetime=2026-05-27+21%3A17%3A41&limit=30&sort=newest");
-        assert_eq!(http.requests.lock().unwrap()[0].headers.get("user-agent").unwrap(), "Mozilla/5.0 test");
+        assert_eq!(
+            request_url(&http),
+            "https://example.test/api/post.listCreator?creatorId=creator&firstId=123&firstPublishedDatetime=2026-05-27+21%3A17%3A41&limit=30&sort=newest"
+        );
+        assert_eq!(
+            http.requests.lock().unwrap()[0]
+                .headers
+                .get("user-agent")
+                .unwrap(),
+            "Mozilla/5.0 test"
+        );
         Ok(())
     }
 
@@ -225,9 +261,24 @@ mod tests {
             status: 200,
             status_text: "OK".into(),
         })]);
-        let client = FanboxClient::new(None, None, Arc::new(http.clone()), RequestScheduler::new(1), None)?;
-        let _ = client.list_home_posts(PostListParams { limit: Some(20), max_id: None, max_published_datetime: None }).await?;
-        assert_eq!(request_url(&http), "https://api.fanbox.cc/post.listHome?limit=20");
+        let client = FanboxClient::new(
+            None,
+            None,
+            Arc::new(http.clone()),
+            RequestScheduler::new(1),
+            None,
+        )?;
+        let _ = client
+            .list_home_posts(PostListParams {
+                limit: Some(20),
+                max_id: None,
+                max_published_datetime: None,
+            })
+            .await?;
+        assert_eq!(
+            request_url(&http),
+            "https://api.fanbox.cc/post.listHome?limit=20"
+        );
         Ok(())
     }
 
@@ -239,7 +290,13 @@ mod tests {
             status: 200,
             status_text: "OK".into(),
         })]);
-        let client = FanboxClient::new(None, None, Arc::new(http.clone()), RequestScheduler::new(1), None)?;
+        let client = FanboxClient::new(
+            None,
+            None,
+            Arc::new(http.clone()),
+            RequestScheduler::new(1),
+            None,
+        )?;
         let _ = client
             .list_supporting_posts(PostListParams {
                 limit: Some(10),
@@ -247,7 +304,10 @@ mod tests {
                 max_published_datetime: Some("2026-05-27 21:17:41".into()),
             })
             .await?;
-        assert_eq!(request_url(&http), "https://api.fanbox.cc/post.listSupporting?limit=10&maxId=11975272&maxPublishedDatetime=2026-05-27+21%3A17%3A41");
+        assert_eq!(
+            request_url(&http),
+            "https://api.fanbox.cc/post.listSupporting?limit=10&maxId=11975272&maxPublishedDatetime=2026-05-27+21%3A17%3A41"
+        );
         Ok(())
     }
 
@@ -259,9 +319,12 @@ mod tests {
             status: 401,
             status_text: "Unauthorized".into(),
         })]);
-        let client = FanboxClient::new(None, None, Arc::new(http), RequestScheduler::new(1), None).unwrap();
+        let client =
+            FanboxClient::new(None, None, Arc::new(http), RequestScheduler::new(1), None).unwrap();
         let error = client
-            .get_creator(GetCreatorParams { creator_id: "creator".into() })
+            .get_creator(GetCreatorParams {
+                creator_id: "creator".into(),
+            })
             .await
             .unwrap_err();
         let fanbox = error.downcast_ref::<FanboxApiError>().unwrap();
@@ -277,9 +340,26 @@ mod tests {
             status: 502,
             status_text: "Bad Gateway".into(),
         })]);
-        let client = FanboxClient::new(None, None, Arc::new(http), RequestScheduler::new(1), None).unwrap();
+        let client = FanboxClient::new(
+            None,
+            None,
+            Arc::new(http),
+            RequestScheduler::with_hooks(
+                1,
+                crate::downloader::logger::Logger::silent(),
+                0,
+                Arc::new(|| 0),
+                60_000,
+                0,
+                Arc::new(|_| Box::pin(async {})),
+            ),
+            None,
+        )
+        .unwrap();
         let error = client
-            .get_post(GetPostParams { post_id: "11975272".into() })
+            .get_post(GetPostParams {
+                post_id: "11975272".into(),
+            })
             .await
             .unwrap_err();
         let fanbox = error.downcast_ref::<FanboxApiError>().unwrap();
@@ -294,9 +374,23 @@ mod tests {
             status: 200,
             status_text: "OK".into(),
         })]);
-        let client = FanboxClient::new(None, None, Arc::new(http.clone()), RequestScheduler::new(1), None)?;
-        let _ = client.paginate_creator_posts(PaginateCreatorPostsParams { creator_id: "creator".into(), sort: Some(PostSort::Oldest) }).await?;
-        assert_eq!(request_url(&http), "https://api.fanbox.cc/post.paginateCreator?creatorId=creator&sort=oldest");
+        let client = FanboxClient::new(
+            None,
+            None,
+            Arc::new(http.clone()),
+            RequestScheduler::new(1),
+            None,
+        )?;
+        let _ = client
+            .paginate_creator_posts(PaginateCreatorPostsParams {
+                creator_id: "creator".into(),
+                sort: Some(PostSort::Oldest),
+            })
+            .await?;
+        assert_eq!(
+            request_url(&http),
+            "https://api.fanbox.cc/post.paginateCreator?creatorId=creator&sort=oldest"
+        );
         Ok(())
     }
 }

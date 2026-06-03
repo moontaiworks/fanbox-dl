@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::Result;
 use serde_json::json;
@@ -18,7 +17,12 @@ use super::resolver::resolve_creator_ids;
 use super::scheduler::RequestScheduler;
 use super::sync::sync_creator;
 
-pub fn run_cli(args: Vec<std::ffi::OsString>, env: HashMap<String, String>, http: Option<Arc<dyn HttpClient>>, writer: Arc<dyn Fn(String) + Send + Sync>) -> i32 {
+pub fn run_cli(
+    args: Vec<std::ffi::OsString>,
+    env: HashMap<String, String>,
+    http: Option<Arc<dyn HttpClient>>,
+    writer: Arc<dyn Fn(String) + Send + Sync>,
+) -> i32 {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         writer(DOWNLOAD_HELP.to_string());
         return 0;
@@ -36,7 +40,12 @@ pub fn run_cli(args: Vec<std::ffi::OsString>, env: HashMap<String, String>, http
     })
 }
 
-async fn run(args: Vec<std::ffi::OsString>, env: HashMap<String, String>, http: Arc<dyn HttpClient>, writer: Arc<dyn Fn(String) + Send + Sync>) -> Result<i32> {
+async fn run(
+    args: Vec<std::ffi::OsString>,
+    env: HashMap<String, String>,
+    http: Arc<dyn HttpClient>,
+    writer: Arc<dyn Fn(String) + Send + Sync>,
+) -> Result<i32> {
     let options = match parse_download_options(args, &env) {
         Ok(options) => options,
         Err(error) => {
@@ -45,21 +54,58 @@ async fn run(args: Vec<std::ffi::OsString>, env: HashMap<String, String>, http: 
         }
     };
     assert_path_budget(&options.output, 240)?;
-    let logger = Logger::new(options.log_format, if options.verbose { LogLevel::Debug } else { LogLevel::Info }, writer.clone());
-    let scheduler = RequestScheduler::with_hooks(options.concurrency, logger.clone(), options.max_retries, Arc::new(|| chrono::Utc::now().timestamp_millis() as u64), options.rate_limit_pause_ms, options.request_interval_ms, Arc::new(|milliseconds| Box::pin(tokio::time::sleep(std::time::Duration::from_millis(milliseconds)))));
-    let client = FanboxClient::new(None, options.cookie.clone(), Arc::clone(&http), scheduler.clone(), options.user_agent.clone())?;
+    let logger = Logger::new(
+        options.log_format,
+        if options.verbose {
+            LogLevel::Debug
+        } else {
+            LogLevel::Info
+        },
+        writer.clone(),
+    );
+    let scheduler = RequestScheduler::with_hooks(
+        options.concurrency,
+        logger.clone(),
+        options.max_retries,
+        Arc::new(|| chrono::Utc::now().timestamp_millis() as u64),
+        options.rate_limit_pause_ms,
+        options.request_interval_ms,
+        Arc::new(|milliseconds| {
+            Box::pin(tokio::time::sleep(std::time::Duration::from_millis(
+                milliseconds,
+            )))
+        }),
+    );
+    let client = FanboxClient::new(
+        None,
+        options.cookie.clone(),
+        Arc::clone(&http),
+        scheduler.clone(),
+        options.user_agent.clone(),
+    )?;
     let creator_ids = resolve_creator_ids(&client, &options).await?;
     if options.dry_run {
         for creator_id in creator_ids {
-            logger.info("dry-run.creator", "Dry-run creator selected", LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]));
+            logger.info(
+                "dry-run.creator",
+                "Dry-run creator selected",
+                LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]),
+            );
             for post in discover_creator_posts(&client, &creator_id, &logger, None).await? {
-                logger.info("dry-run.post", "Dry-run post discovered", LogFields::from_iter([
-                    (String::from("creatorId"), json!(creator_id)),
-                    (String::from("postId"), json!(post.id)),
-                    (String::from("restricted"), json!(post.is_restricted)),
-                    (String::from("title"), json!(post.title)),
-                    (String::from("updatedDatetime"), json!(post.updated_datetime)),
-                ]));
+                logger.info(
+                    "dry-run.post",
+                    "Dry-run post discovered",
+                    LogFields::from_iter([
+                        (String::from("creatorId"), json!(creator_id)),
+                        (String::from("postId"), json!(post.id)),
+                        (String::from("restricted"), json!(post.is_restricted)),
+                        (String::from("title"), json!(post.title)),
+                        (
+                            String::from("updatedDatetime"),
+                            json!(post.updated_datetime),
+                        ),
+                    ]),
+                );
             }
         }
         return Ok(0);
@@ -67,18 +113,49 @@ async fn run(args: Vec<std::ffi::OsString>, env: HashMap<String, String>, http: 
     let asset_downloader = AssetDownloader::new(http, scheduler);
     let mut failed = false;
     for creator_id in creator_ids {
-        logger.info("creator.sync.start", "Creator sync started", LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]));
-        match sync_creator(&asset_downloader, &client, &creator_id, &options.output, options.verify_assets, &logger).await {
+        logger.info(
+            "creator.sync.start",
+            "Creator sync started",
+            LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]),
+        );
+        match sync_creator(
+            &asset_downloader,
+            &client,
+            &creator_id,
+            &options.output,
+            options.verify_assets,
+            &logger,
+        )
+        .await
+        {
             Ok(manifest) => {
-                failed |= manifest.posts.values().any(|post| matches!(post.status, super::manifest::PostStatus::Failed));
-                logger.info("creator.sync.complete", "Creator sync completed", LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]));
+                failed |= manifest
+                    .posts
+                    .values()
+                    .any(|post| matches!(post.status, super::manifest::PostStatus::Failed));
+                logger.info(
+                    "creator.sync.complete",
+                    "Creator sync completed",
+                    LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]),
+                );
             }
             Err(error) => {
                 if let Some(source) = error.source() {
-                    log_debug_error_response(&logger, source, LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]));
+                    log_debug_error_response(
+                        &logger,
+                        source,
+                        LogFields::from_iter([(String::from("creatorId"), json!(creator_id))]),
+                    );
                 }
                 failed = true;
-                logger.error("creator.sync.failed", "Creator sync failed", LogFields::from_iter([(String::from("creatorId"), json!(creator_id)), (String::from("error"), json!(error.to_string()))]));
+                logger.error(
+                    "creator.sync.failed",
+                    "Creator sync failed",
+                    LogFields::from_iter([
+                        (String::from("creatorId"), json!(creator_id)),
+                        (String::from("error"), json!(error.to_string())),
+                    ]),
+                );
             }
         }
     }

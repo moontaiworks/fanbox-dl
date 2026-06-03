@@ -49,3 +49,6 @@ Thumbs.db
 .parcel-cache/
 .next/
 out/
+
+# Rust
+target/

@@ -4,6 +4,7 @@ pub mod discovery;
 pub mod errors;
 pub mod logger;
 pub mod manifest;
+pub mod markdown;
 pub mod options;
 pub mod path;
 pub mod resolver;

@@ -62,7 +62,8 @@ pub struct ManifestStore {
 
 impl ManifestStore {
     pub fn new(output_directory: &Path, creator_id: &str) -> anyhow::Result<Self> {
-        let creator_directory = output_directory.join(create_creator_directory_name(creator_id, output_directory)?);
+        let creator_directory =
+            output_directory.join(create_creator_directory_name(creator_id, output_directory)?);
         let manifest_path = creator_directory.join("manifest.json");
         Ok(Self {
             creator_directory,
@@ -74,7 +75,12 @@ impl ManifestStore {
         match tokio::fs::read_to_string(&self.manifest_path).await {
             Ok(contents) => Ok(serde_json::from_str(&contents)?),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(CreatorManifest {
-                creator_id: self.creator_directory.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+                creator_id: self
+                    .creator_directory
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
                 posts: BTreeMap::new(),
                 schema_version: 1,
             }),
@@ -85,7 +91,11 @@ impl ManifestStore {
     pub async fn save(&self, manifest: &CreatorManifest) -> anyhow::Result<()> {
         tokio::fs::create_dir_all(&self.creator_directory).await?;
         let temporary_path = self.manifest_path.with_extension("json.tmp");
-        tokio::fs::write(&temporary_path, format!("{}\n", serde_json::to_string_pretty(manifest)?)).await?;
+        tokio::fs::write(
+            &temporary_path,
+            format!("{}\n", serde_json::to_string_pretty(manifest)?),
+        )
+        .await?;
         tokio::fs::rename(&temporary_path, &self.manifest_path).await?;
         Ok(())
     }

@@ -92,8 +92,12 @@ impl Logger {
                 Value::Object(entry).to_string()
             }
             LogFormat::Pretty => {
-                let ordered = BTreeMap::from_iter(fields.into_iter());
-                format!("{time} {} {event} {message} {}", level.as_str().to_uppercase(), serde_json::to_string(&ordered).unwrap())
+                let ordered = BTreeMap::from_iter(fields);
+                format!(
+                    "{time} {} {event} {message} {}",
+                    level.as_str().to_uppercase(),
+                    serde_json::to_string(&ordered).unwrap()
+                )
             }
         };
         writer(line);
