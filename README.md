@@ -78,6 +78,20 @@ Authenticated downloads read `FANBOX_SESSION_ID` by default. You can override
 it with `--cookie-file` or `--cookie`. Passing `--cookie` is convenient but may
 leave the session value in shell history.
 
+If FANBOX returns a Cloudflare block page, use the same `User-Agent` as the
+browser session that produced your cookie:
+
+```bash
+fanbox-dl download \
+  --creator creator-id \
+  --cookie-file ./fanbox-cookie.txt \
+  --user-agent "Mozilla/5.0 ..."
+```
+
+`--cookie` and `--cookie-file` may contain a full Cookie header, for example
+`FANBOXSESSID=...; cf_clearance=...`, when those values come from your own
+logged-in browser session.
+
 Useful request controls:
 
 ```bash

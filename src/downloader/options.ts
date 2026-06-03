@@ -14,6 +14,7 @@ export interface DownloadOptions {
   rateLimitPauseMs: number;
   requestIntervalMs: number;
   supporting: boolean;
+  userAgent?: string;
   verbose: boolean;
   verifyAssets: boolean;
 }
@@ -70,6 +71,7 @@ export function parseDownloadOptions(
       values["request-interval-ms"],
     ),
     supporting: values.supporting,
+    userAgent: values["user-agent"] ?? env.FANBOX_USER_AGENT,
     verbose: values.verbose,
     verifyAssets: values["verify-assets"],
   };
@@ -103,6 +105,7 @@ function parseDownloadArgs(args: string[]) {
         "rate-limit-pause-ms": { default: "60000", type: "string" },
         "request-interval-ms": { default: "0", type: "string" },
         supporting: { default: false, type: "boolean" },
+        "user-agent": { type: "string" },
         verbose: { default: false, type: "boolean" },
         "verify-assets": { default: false, type: "boolean" },
       },

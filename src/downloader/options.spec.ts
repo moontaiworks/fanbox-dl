@@ -30,6 +30,7 @@ describe("parseDownloadOptions", () => {
       rateLimitPauseMs: 60_000,
       requestIntervalMs: 0,
       supporting: false,
+      userAgent: undefined,
       verbose: false,
       verifyAssets: false,
     });
@@ -54,6 +55,15 @@ describe("parseDownloadOptions", () => {
     );
 
     expect(options.cookie).toBe("FANBOXSESSID=explicit");
+  });
+
+  it("parses user agent from option before environment", () => {
+    const options = parseDownloadOptions(
+      ["download", "--creator", "alpha", "--user-agent", "cli agent"],
+      { FANBOX_USER_AGENT: "env agent" },
+    );
+
+    expect(options.userAgent).toBe("cli agent");
   });
 
   it("rejects a download without creator selectors", () => {

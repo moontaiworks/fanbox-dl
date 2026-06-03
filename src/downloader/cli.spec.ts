@@ -46,6 +46,7 @@ describe("runCli", () => {
 
     expect(lines.join("\n")).toContain("Usage: fanbox-dl download [options]");
     expect(lines.join("\n")).toContain("--dry-run");
+    expect(lines.join("\n")).toContain("--user-agent");
   });
 
   it("prints usage guidance for empty input", async () => {
@@ -174,5 +175,23 @@ describe("runCli", () => {
     expect(lines.join("\n")).toContain('"level":"debug"');
     expect(lines.join("\n")).toContain('"status":500');
     expect(lines.join("\n")).toContain('"body":{"error":"nope"}');
+  });
+
+  it("passes a configured user agent to FANBOX API requests", async () => {
+    let userAgent: null | string = null;
+    const fetch: typeof globalThis.fetch = (_input, init) => {
+      userAgent = new Headers(init?.headers).get("User-Agent");
+      return Promise.resolve(Response.json({ body: [summary()] }));
+    };
+
+    await expect(
+      runCli(
+        ["download", "--creator", "creator", "--dry-run", "--user-agent", "ua"],
+        {},
+        { fetch, write: () => undefined },
+      ),
+    ).resolves.toBe(0);
+
+    expect(userAgent).toBe("ua");
   });
 });

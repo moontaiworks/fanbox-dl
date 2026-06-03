@@ -37,11 +37,13 @@ export class FanboxClient {
   readonly #baseUrl: string;
   readonly #cookie?: string;
   readonly #fetch: typeof globalThis.fetch;
+  readonly #userAgent?: string;
 
   public constructor(options: FanboxClientOptions = {}) {
     this.#baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
     this.#cookie = options.cookie;
     this.#fetch = options.fetch ?? globalThis.fetch;
+    this.#userAgent = options.userAgent;
   }
 
   public getCreator(params: GetCreatorParams): Promise<Creator> {
@@ -98,11 +100,18 @@ export class FanboxClient {
     }
 
     const headers: Record<string, string> = {
+      Accept: "application/json, text/plain, */*",
       Origin: "https://www.fanbox.cc",
       Referer: "https://www.fanbox.cc/",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-site",
     };
     if (this.#cookie !== undefined) {
       headers.Cookie = this.#cookie;
+    }
+    if (this.#userAgent !== undefined) {
+      headers["User-Agent"] = this.#userAgent;
     }
 
     const response = await this.#fetch(url, { headers, method: "GET" });

@@ -54,11 +54,31 @@ describe("FanboxClient collection endpoints", () => {
     );
     expect(requests[0]?.init).toMatchObject({
       headers: {
+        Accept: "application/json, text/plain, */*",
         Cookie: "FANBOXSESSID=session-id",
         Origin: "https://www.fanbox.cc",
         Referer: "https://www.fanbox.cc/",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-site",
       },
       method: "GET",
+    });
+  });
+
+  it("sends a caller-provided user agent", async () => {
+    const { fetch, requests } = createRecordingFetch([]);
+    const client = new FanboxClient({
+      fetch,
+      userAgent: "Mozilla/5.0 test",
+    });
+
+    await client.getPost({ postId: "11975272" });
+
+    expect(requests[0]?.init).toMatchObject({
+      headers: {
+        "User-Agent": "Mozilla/5.0 test",
+      },
     });
   });
 

@@ -27,7 +27,9 @@ Selectors:
 Auth:
   --cookie <value>          Raw session ID or FANBOXSESSID=... cookie.
   --cookie-file <path>      Read session value from a file.
+  --user-agent <value>      Send the User-Agent from your logged-in browser.
   FANBOX_SESSION_ID         Environment fallback.
+  FANBOX_USER_AGENT         User-Agent environment fallback.
 
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
@@ -78,6 +80,7 @@ export async function runCli(
     const client = new FanboxClient({
       cookie: options.cookie,
       fetch: (input, init) => scheduler.fetch(input, fetch, init),
+      userAgent: options.userAgent,
     });
     const creatorIds = await resolveCreatorIds(client, options);
     if (options.dryRun) {
