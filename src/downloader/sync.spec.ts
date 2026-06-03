@@ -1,0 +1,266 @@
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import type { ImagePost, PostSummary } from "../types.js";
+import { AssetDownloader } from "./asset.js";
+import { RequestScheduler } from "./scheduler.js";
+import { syncCreator } from "./sync.js";
+
+function post(extension = "png"): ImagePost {
+  return {
+    ...summary(),
+    body: {
+      images: [
+        {
+          extension,
+          height: 1,
+          id: "image-id",
+          originalUrl: "https://example.test/image.png",
+          thumbnailUrl: "https://example.test/thumb.jpg",
+          width: 1,
+        },
+      ],
+      text: "Hello",
+    },
+    coverImageUrl: "https://example.test/cover.jpg",
+    imageForShare: null,
+    nextPost: null,
+    prevPost: null,
+    type: "image",
+  };
+}
+
+function requestUrl(input: Parameters<typeof globalThis.fetch>[0]): string {
+  return typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+}
+
+function summary(restricted = false, title = "Title"): PostSummary {
+  return {
+    commentCount: 0,
+    cover: { type: "cover_image", url: "https://example.test/cover.jpg" },
+    creatorId: "creator",
+    excerpt: "",
+    feeRequired: 0,
+    hasAdultContent: false,
+    id: "123",
+    isCommentingRestricted: false,
+    isLiked: false,
+    isPinned: false,
+    isRestricted: restricted,
+    likeCount: 0,
+    publishedDatetime: "2026-05-27T21:17:41+09:00",
+    tags: [],
+    title,
+    updatedDatetime: "2026-05-27T21:17:41+09:00",
+    user: { iconUrl: "", name: "Creator", userId: "1" },
+  };
+}
+
+describe("syncCreator", () => {
+  it("downloads a post once and skips unchanged content on the next run", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    let postInfoCalls = 0;
+    const client = {
+      getPost: () => {
+        postInfoCalls += 1;
+        return Promise.resolve(post());
+      },
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      fetch: (input) =>
+        Promise.resolve(new Response(requestUrl(input), { status: 200 })),
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+
+    expect(postInfoCalls).toBe(1);
+    const postDirectory = path.join(
+      directory,
+      "creator",
+      "posts",
+      "2026-05-27_123_Title",
+    );
+    await expect(
+      readFile(path.join(postDirectory, "content.md"), "utf8"),
+    ).resolves.toContain("![image-id](assets/image_image-id.png)");
+    await expect(
+      readFile(path.join(postDirectory, "metadata.json"), "utf8"),
+    ).resolves.toContain('"type": "image"');
+  });
+
+  it("stores a restricted summary without requesting post details", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    let postInfoCalls = 0;
+    const client = {
+      getPost: () => {
+        postInfoCalls += 1;
+        return Promise.resolve(post());
+      },
+      listCreatorPosts: () => Promise.resolve([summary(true)]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+
+    expect(postInfoCalls).toBe(0);
+    await expect(
+      readFile(path.join(directory, "creator", "manifest.json"), "utf8"),
+    ).resolves.toContain('"status": "skipped"');
+  });
+
+  it("redownloads a corrupted asset when verification is requested", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    let assetCalls = 0;
+    let postInfoCalls = 0;
+    const client = {
+      getPost: () => {
+        postInfoCalls += 1;
+        return Promise.resolve(post());
+      },
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      fetch: (input) => {
+        assetCalls += 1;
+        return Promise.resolve(
+          new Response(requestUrl(input), { status: 200 }),
+        );
+      },
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+    const assetPath = path.join(
+      directory,
+      "creator",
+      "posts",
+      "2026-05-27_123_Title",
+      "assets",
+      "image_image-id.png",
+    );
+    await writeFile(assetPath, "corrupted");
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+      verifyAssets: true,
+    });
+
+    expect(postInfoCalls).toBe(2);
+    expect(assetCalls).toBe(3);
+    await expect(readFile(assetPath, "utf8")).resolves.toBe(
+      "https://example.test/image.png",
+    );
+  });
+
+  it("rewrites asset manifest paths when a renamed post directory moves", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    let assetCalls = 0;
+    let title = "Title";
+    const client = {
+      getPost: () => Promise.resolve(post()),
+      listCreatorPosts: () => Promise.resolve([summary(false, title)]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      fetch: (input) => {
+        assetCalls += 1;
+        return Promise.resolve(
+          new Response(requestUrl(input), { status: 200 }),
+        );
+      },
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+    title = "Renamed";
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+
+    expect(assetCalls).toBe(2);
+    await expect(
+      readFile(path.join(directory, "creator", "manifest.json"), "utf8"),
+    ).resolves.toContain(
+      "posts/2026-05-27_123_Renamed/assets/image_image-id.png",
+    );
+  });
+
+  it("sanitizes asset extensions before using them in file names", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    const client = {
+      getPost: () => Promise.resolve(post("p/ng")),
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      fetch: () => Promise.resolve(new Response("asset", { status: 200 })),
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      outputDirectory: directory,
+    });
+
+    await expect(
+      readFile(
+        path.join(
+          directory,
+          "creator",
+          "posts",
+          "2026-05-27_123_Title",
+          "assets",
+          "image_image-id.p_ng",
+        ),
+        "utf8",
+      ),
+    ).resolves.toBe("asset");
+  });
+});
