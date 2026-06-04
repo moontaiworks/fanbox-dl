@@ -2,8 +2,19 @@ import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
+import { CREATOR_GET_PATH } from "./endpoints/creator-get.js";
+import { CREATOR_LIST_FOLLOWING_PATH } from "./endpoints/creator-list-following.js";
+import type { PostSummary as EndpointPostSummary } from "./endpoints/models/post.js";
+import { PLAN_LIST_CREATOR_PATH } from "./endpoints/plan-list-creator.js";
+import { PLAN_LIST_SUPPORTING_PATH } from "./endpoints/plan-list-supporting.js";
+import { POST_INFO_PATH } from "./endpoints/post-info.js";
+import { POST_LIST_CREATOR_PATH } from "./endpoints/post-list-creator.js";
+import { POST_LIST_HOME_PATH } from "./endpoints/post-list-home.js";
+import { POST_LIST_SUPPORTING_PATH } from "./endpoints/post-list-supporting.js";
+import { POST_PAGINATE_CREATOR_PATH } from "./endpoints/post-paginate-creator.js";
 import type { HttpRequest, HttpResponse, HttpTransport } from "./http.js";
 import { FanboxApiError, FanboxClient } from "./index.js";
+import type { PostSummary as PublicPostSummary } from "./index.js";
 
 interface RecordedRequest {
   request: HttpRequest | string | URL;
@@ -77,6 +88,25 @@ function getRequestUrl(request?: RecordedRequest): string {
 }
 
 describe("FanboxClient collection endpoints", () => {
+  it("exposes each endpoint path from its own module", () => {
+    expect(CREATOR_GET_PATH).toBe("creator.get");
+    expect(CREATOR_LIST_FOLLOWING_PATH).toBe("creator.listFollowing");
+    expect(PLAN_LIST_CREATOR_PATH).toBe("plan.listCreator");
+    expect(PLAN_LIST_SUPPORTING_PATH).toBe("plan.listSupporting");
+    expect(POST_INFO_PATH).toBe("post.info");
+    expect(POST_LIST_CREATOR_PATH).toBe("post.listCreator");
+    expect(POST_LIST_HOME_PATH).toBe("post.listHome");
+    expect(POST_LIST_SUPPORTING_PATH).toBe("post.listSupporting");
+    expect(POST_PAGINATE_CREATOR_PATH).toBe("post.paginateCreator");
+  });
+
+  it("keeps public model exports compatible with endpoint model exports", () => {
+    const publicSummary = null as unknown as PublicPostSummary;
+    const endpointSummary = publicSummary satisfies EndpointPostSummary;
+
+    expect(endpointSummary).toBeNull();
+  });
+
   it("gets a creator with FANBOX headers and unwraps its body", async () => {
     const creator = { creatorId: "alfabravo11" };
     const { requests, transport } = createRecordingTransport(creator);
