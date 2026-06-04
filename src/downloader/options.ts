@@ -33,6 +33,10 @@ export function parseDownloadOptions(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): DownloadOptions {
+  if (args[0] !== "download") {
+    throw new CliUsageError(`unknown command: ${args[0]}`);
+  }
+
   const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting) {
