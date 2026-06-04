@@ -59,10 +59,10 @@ npx @moontaiworks/fanbox-dl download \
 ```
 
 The downloader stores each post as `metadata.json`, `content.md`, and asset
-files in a per-post directory. Asset file names include the post directory name
-and a two-digit sequence number, so files are easy to browse in order. It keeps
-a per-creator `manifest.json`, skips unchanged posts, resumes `.part` files
-with HTTP Range requests when supported, and can verify existing SHA-256 hashes:
+files in a per-post directory. Asset file names include a two-digit sequence
+number, so files are easy to browse in order. It keeps a per-creator
+`manifest.json`, skips unchanged posts, resumes `.part` files with HTTP Range
+requests when supported, and can verify existing SHA-256 hashes:
 
 ```bash
 fanbox-dl download --creator creator-id --verify-assets
@@ -76,7 +76,8 @@ fanbox-dl download --creator creator-id --dry-run
 ```
 
 To place all post files directly under each creator directory instead of using
-one directory per post, enable flat post layout:
+one directory per post, enable flat post layout. In this mode, generated file
+names include the post name to avoid collisions:
 
 ```bash
 fanbox-dl download --creator creator-id --flat-posts

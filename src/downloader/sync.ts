@@ -111,6 +111,7 @@ async function archiveObsoleteAssets(
 
 function assetPath(
   assetDirectory: string,
+  includePostName: boolean,
   postName: string,
   index: number,
   name: string,
@@ -118,11 +119,10 @@ function assetPath(
 ): string {
   const safeExtension = sanitizePathComponent(extension, { maxBytes: 16 });
   const sequence = String(index).padStart(2, "0");
-  return sanitizePathComponentForDirectory(
-    `${postName}_${sequence}_${name}`,
-    assetDirectory,
-    { suffix: `.${safeExtension}` },
-  );
+  const prefix = includePostName ? `${postName}_${sequence}_` : `${sequence}_`;
+  return sanitizePathComponentForDirectory(`${prefix}${name}`, assetDirectory, {
+    suffix: `.${safeExtension}`,
+  });
 }
 
 function createPostLayout(
@@ -165,6 +165,7 @@ function extensionFromUrl(url: string, fallback: string): string {
 function listAssets(
   post: Post,
   assetDirectory: string,
+  includePostName: boolean,
   postName: string,
 ): AssetDescriptor[] {
   const assets: AssetDescriptor[] = [];
@@ -173,6 +174,7 @@ function listAssets(
       key: "cover",
       relativePath: assetPath(
         assetDirectory,
+        includePostName,
         postName,
         assets.length,
         `cover_${post.id}`,
@@ -187,6 +189,7 @@ function listAssets(
         key: `image:${image.id}`,
         relativePath: assetPath(
           assetDirectory,
+          includePostName,
           postName,
           assets.length,
           `image_${image.id}`,
@@ -202,6 +205,7 @@ function listAssets(
         key: `file:${file.id}`,
         relativePath: assetPath(
           assetDirectory,
+          includePostName,
           postName,
           assets.length,
           `file_${file.id}_${file.name}`,
@@ -218,6 +222,7 @@ function listAssets(
         key: `image:${image.id}`,
         relativePath: assetPath(
           assetDirectory,
+          includePostName,
           postName,
           assets.length,
           `image_${image.id}`,
@@ -231,6 +236,7 @@ function listAssets(
         key: `file:${file.id}`,
         relativePath: assetPath(
           assetDirectory,
+          includePostName,
           postName,
           assets.length,
           `file_${file.id}_${file.name}`,
@@ -352,7 +358,12 @@ async function syncPost(
 
   try {
     const post = await options.client.getPost({ postId: summary.id });
-    const assets = listAssets(post, postDirectory, layout.postName);
+    const assets = listAssets(
+      post,
+      postDirectory,
+      options.flatPosts === true,
+      layout.postName,
+    );
     await archiveObsoleteAssets(creatorDirectory, entry, assets);
     const paths = new Map<string, string>();
     const downloads = (
