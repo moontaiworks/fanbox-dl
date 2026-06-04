@@ -6,6 +6,7 @@ export interface DownloadOptions {
   cookie?: string;
   creatorIds: string[];
   dryRun: boolean;
+  flatPosts: boolean;
   following: boolean;
   ignoreCreatorIds: string[];
   logFormat: "json" | "pretty";
@@ -53,6 +54,7 @@ export function parseDownloadOptions(
     cookie,
     creatorIds,
     dryRun: values["dry-run"],
+    flatPosts: values["flat-posts"],
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
     logFormat: values["log-format"],
@@ -102,6 +104,7 @@ function parseDownloadArgs(args: string[]) {
         "cookie-file": { type: "string" },
         creator: { multiple: true, type: "string" },
         "dry-run": { default: false, type: "boolean" },
+        "flat-posts": { default: false, type: "boolean" },
         following: { default: false, type: "boolean" },
         "ignore-creator": { multiple: true, type: "string" },
         "log-format": { default: "json", type: "string" },

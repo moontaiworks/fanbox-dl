@@ -26,6 +26,7 @@ describe("parseDownloadOptions", () => {
       concurrency: 3,
       creatorIds: ["alpha", "beta"],
       dryRun: false,
+      flatPosts: false,
       following: true,
       ignoreCreatorIds: ["beta"],
       logFormat: "json",
@@ -50,6 +51,15 @@ describe("parseDownloadOptions", () => {
       dryRun: true,
       verbose: true,
     });
+  });
+
+  it("parses flat posts mode", () => {
+    const options = parseDownloadOptions(
+      ["download", "--creator", "alpha", "--flat-posts"],
+      {},
+    );
+
+    expect(options.flatPosts).toBe(true);
   });
 
   it("prefers explicit cookie over cookie file and environment", () => {

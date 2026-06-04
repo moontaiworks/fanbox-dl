@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -143,6 +143,63 @@ describe("syncCreator", () => {
     await expect(
       readFile(path.join(postDirectory, "metadata.json"), "utf8"),
     ).resolves.toContain('"type": "image"');
+  });
+
+  it("stores all post files directly in the creator directory in flat posts mode", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
+    const client = {
+      getPost: () => Promise.resolve(post()),
+      listCreatorPosts: () => Promise.resolve([summary()]),
+      paginateCreatorPosts: () => Promise.resolve([]),
+    };
+    const assetDownloader = new AssetDownloader({
+      scheduler: new RequestScheduler({ concurrency: 1 }),
+      transport: {
+        close: () => Promise.resolve(),
+        request: (input) =>
+          Promise.resolve(response(requestUrl(input), { status: 200 })),
+      },
+    });
+
+    await syncCreator({
+      assetDownloader,
+      client,
+      creatorId: "creator",
+      flatPosts: true,
+      outputDirectory: directory,
+    });
+
+    const creatorDirectory = path.join(directory, "creator");
+    await expect(
+      readFile(
+        path.join(creatorDirectory, "2026-05-27_123_Title_content.md"),
+        "utf8",
+      ),
+    ).resolves.toContain(
+      "![image-id](./2026-05-27_123_Title_01_image_image-id.png)",
+    );
+    await expect(
+      readFile(
+        path.join(creatorDirectory, "2026-05-27_123_Title_metadata.json"),
+        "utf8",
+      ),
+    ).resolves.toContain('"type": "image"');
+    await expect(
+      readFile(
+        path.join(creatorDirectory, "2026-05-27_123_Title_summary.json"),
+        "utf8",
+      ),
+    ).resolves.toContain('"id": "123"');
+    await expect(
+      readFile(
+        path.join(
+          creatorDirectory,
+          "2026-05-27_123_Title_01_image_image-id.png",
+        ),
+        "utf8",
+      ),
+    ).resolves.toBe("https://example.test/image.png");
+    await expect(stat(path.join(creatorDirectory, "posts"))).rejects.toThrow();
   });
 
   it("stores a restricted summary without requesting post details", async () => {

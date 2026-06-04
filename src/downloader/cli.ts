@@ -36,6 +36,7 @@ Auth:
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
   --dry-run                 List creators/posts without downloading or writing.
+  --flat-posts              Store post files directly under each creator.
   --verify-assets           Verify existing asset size and SHA-256 locally.
 
 Requests:
@@ -129,6 +130,7 @@ export async function runCli(
           assetDownloader,
           client,
           creatorId,
+          flatPosts: options.flatPosts,
           logger,
           outputDirectory: options.output,
           verifyAssets: options.verifyAssets,

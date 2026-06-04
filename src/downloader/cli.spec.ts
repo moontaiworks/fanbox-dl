@@ -74,6 +74,7 @@ describe("runCli", () => {
 
     expect(lines.join("\n")).toContain("Usage: fanbox-dl download [options]");
     expect(lines.join("\n")).toContain("--dry-run");
+    expect(lines.join("\n")).toContain("--flat-posts");
     expect(lines.join("\n")).toContain("--user-agent");
   });
 

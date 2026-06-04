@@ -43,6 +43,7 @@ export interface SyncCreatorOptions {
   assetDownloader: AssetDownloader;
   client: SyncClient;
   creatorId: string;
+  flatPosts?: boolean;
   logger?: Logger;
   outputDirectory: string;
   verifyAssets?: boolean;
@@ -52,6 +53,14 @@ interface AssetDescriptor {
   key: string;
   relativePath: string;
   url: string;
+}
+
+interface PostLayout {
+  contentPath: string;
+  directory: string;
+  metadataPath: string;
+  postName: string;
+  summaryPath: string;
 }
 
 export async function syncCreator(
@@ -102,19 +111,48 @@ async function archiveObsoleteAssets(
 }
 
 function assetPath(
-  postDirectory: string,
+  assetDirectory: string,
+  postName: string,
   index: number,
   name: string,
   extension: string,
 ): string {
   const safeExtension = sanitizePathComponent(extension, { maxBytes: 16 });
-  const postDirectoryName = path.basename(postDirectory);
   const sequence = String(index).padStart(2, "0");
   return sanitizePathComponentForDirectory(
-    `${postDirectoryName}_${sequence}_${name}`,
-    postDirectory,
+    `${postName}_${sequence}_${name}`,
+    assetDirectory,
     { suffix: `.${safeExtension}` },
   );
+}
+
+function createPostLayout(
+  summary: PostSummary,
+  creatorDirectory: string,
+  flatPosts = false,
+): PostLayout {
+  const postName = createPostDirectoryName(
+    summary,
+    flatPosts ? creatorDirectory : path.join(creatorDirectory, "posts"),
+  );
+  if (flatPosts) {
+    return {
+      contentPath: `${postName}_content.md`,
+      directory: ".",
+      metadataPath: `${postName}_metadata.json`,
+      postName,
+      summaryPath: `${postName}_summary.json`,
+    };
+  }
+
+  const directory = path.posix.join("posts", postName);
+  return {
+    contentPath: path.posix.join(directory, "content.md"),
+    directory,
+    metadataPath: path.posix.join(directory, "metadata.json"),
+    postName,
+    summaryPath: path.posix.join(directory, "summary.json"),
+  };
 }
 
 async function exists(filePath: string): Promise<boolean> {
@@ -127,13 +165,18 @@ function extensionFromUrl(url: string, fallback: string): string {
   return path.extname(new URL(url).pathname).slice(1) || fallback;
 }
 
-function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
+function listAssets(
+  post: Post,
+  assetDirectory: string,
+  postName: string,
+): AssetDescriptor[] {
   const assets: AssetDescriptor[] = [];
   if (post.coverImageUrl) {
     assets.push({
       key: "cover",
       relativePath: assetPath(
-        postDirectory,
+        assetDirectory,
+        postName,
         assets.length,
         `cover_${post.id}`,
         extensionFromUrl(post.coverImageUrl, "jpg"),
@@ -146,7 +189,8 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
       assets.push({
         key: `image:${image.id}`,
         relativePath: assetPath(
-          postDirectory,
+          assetDirectory,
+          postName,
           assets.length,
           `image_${image.id}`,
           image.extension,
@@ -160,7 +204,8 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
       assets.push({
         key: `file:${file.id}`,
         relativePath: assetPath(
-          postDirectory,
+          assetDirectory,
+          postName,
           assets.length,
           `file_${file.id}_${file.name}`,
           file.extension,
@@ -175,7 +220,8 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
       assets.push({
         key: `image:${image.id}`,
         relativePath: assetPath(
-          postDirectory,
+          assetDirectory,
+          postName,
           assets.length,
           `image_${image.id}`,
           image.extension,
@@ -187,7 +233,8 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
       assets.push({
         key: `file:${file.id}`,
         relativePath: assetPath(
-          postDirectory,
+          assetDirectory,
+          postName,
           assets.length,
           `file_${file.id}_${file.name}`,
           file.extension,
@@ -198,6 +245,14 @@ function listAssets(post: Post, postDirectory: string): AssetDescriptor[] {
   }
 
   return assets;
+}
+
+function markdownAssetPath(contentPath: string, assetPath: string): string {
+  const relative = path.posix.relative(
+    path.posix.dirname(contentPath),
+    assetPath,
+  );
+  return (relative || path.posix.basename(assetPath)).replace(/^\.\//, "");
 }
 
 async function moveExistingAsset(
@@ -235,32 +290,31 @@ async function syncPost(
     options.outputDirectory,
     createCreatorDirectoryName(options.creatorId, options.outputDirectory),
   );
-  const directory = path.posix.join(
-    "posts",
-    createPostDirectoryName(summary, path.join(creatorDirectory, "posts")),
-  );
+  const layout = createPostLayout(summary, creatorDirectory, options.flatPosts);
   let entry = manifest.posts[summary.id];
   let renamed = false;
-  if (entry && entry.directory !== directory) {
+  if (entry && entry.directory !== layout.directory) {
     const previousDirectory = entry.directory;
     const oldDirectory = path.join(creatorDirectory, entry.directory);
-    if (await exists(oldDirectory)) {
-      await mkdir(path.dirname(path.join(creatorDirectory, directory)), {
+    if (layout.directory !== "." && (await exists(oldDirectory))) {
+      await mkdir(path.dirname(path.join(creatorDirectory, layout.directory)), {
         recursive: true,
       });
-      await rename(oldDirectory, path.join(creatorDirectory, directory));
+      await rename(oldDirectory, path.join(creatorDirectory, layout.directory));
     }
-    entry.directory = directory;
-    for (const asset of Object.values(entry.assets)) {
-      if (asset?.path.startsWith(`${previousDirectory}/`)) {
-        asset.path = `${directory}${asset.path.slice(previousDirectory.length)}`;
+    entry.directory = layout.directory;
+    if (layout.directory !== ".") {
+      for (const asset of Object.values(entry.assets)) {
+        if (asset?.path.startsWith(`${previousDirectory}/`)) {
+          asset.path = `${layout.directory}${asset.path.slice(previousDirectory.length)}`;
+        }
       }
     }
     renamed = true;
   }
   entry ??= {
     assets: {},
-    directory,
+    directory: layout.directory,
     id: summary.id,
     restricted: summary.isRestricted,
     status: "pending",
@@ -271,7 +325,7 @@ async function syncPost(
   assertPathBudget(postDirectory);
   await mkdir(postDirectory, { recursive: true });
   await writeTimestampedJson(
-    path.join(postDirectory, "summary.json"),
+    path.join(creatorDirectory, layout.summaryPath),
     summary,
     summary.publishedDatetime,
   );
@@ -301,16 +355,19 @@ async function syncPost(
 
   try {
     const post = await options.client.getPost({ postId: summary.id });
-    const assets = listAssets(post, postDirectory);
+    const assets = listAssets(post, postDirectory, layout.postName);
     await archiveObsoleteAssets(creatorDirectory, entry, assets);
     const paths = new Map<string, string>();
     const downloads = (
       await Promise.all(
         assets.map(async (asset) => {
-          paths.set(asset.key, asset.relativePath);
           const manifestPath = path.posix.join(
             entry.directory,
             asset.relativePath,
+          );
+          paths.set(
+            asset.key,
+            markdownAssetPath(layout.contentPath, manifestPath),
           );
           const existing = entry.assets[asset.key];
           if (
@@ -368,16 +425,20 @@ async function syncPost(
       }),
     );
     await writeTimestampedJson(
-      path.join(postDirectory, "metadata.json"),
+      path.join(creatorDirectory, layout.metadataPath),
       post,
       summary.publishedDatetime,
     );
     await writeFile(
-      path.join(postDirectory, "content.md"),
+      path.join(creatorDirectory, layout.contentPath),
       renderPostMarkdown(post, paths),
     );
     const published = new Date(summary.publishedDatetime);
-    await utimes(path.join(postDirectory, "content.md"), published, published);
+    await utimes(
+      path.join(creatorDirectory, layout.contentPath),
+      published,
+      published,
+    );
     entry.restricted = false;
     entry.status = downloads.some(
       ({ assetEntry }) => assetEntry.status === "failed",
