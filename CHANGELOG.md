@@ -1,3 +1,28 @@
+## 1.0.0 (2026-06-04)
+
+### Features
+
+* add --flat-posts flag ([da93f00](https://github.com/moontaiworks/fanbox-dl/commit/da93f005aa9ff8af213f641269117167f61116eb))
+* add cli help dry run and verbose logs ([79500af](https://github.com/moontaiworks/fanbox-dl/commit/79500afd82f1ca3f854616cc42c61ead32221fc7))
+* add downloader primitives ([eeb88db](https://github.com/moontaiworks/fanbox-dl/commit/eeb88db2652cedf5f96c99c9dd68694f7f41e7e8))
+* add native http2 transport ([60d0540](https://github.com/moontaiworks/fanbox-dl/commit/60d0540f7cd8ce985ee27f6dddb7431b27eaa542))
+* add readonly fanbox sdk client ([755c2a6](https://github.com/moontaiworks/fanbox-dl/commit/755c2a6125c615dbcbe4ce613325c9d18e384418))
+* expose fanbox download cli ([a937bba](https://github.com/moontaiworks/fanbox-dl/commit/a937bbad2a0777168bf929f82b58d4f7b0acd976))
+* implement fanbox download workflow ([df14d98](https://github.com/moontaiworks/fanbox-dl/commit/df14d98eed96b31f68b26042edeab2f98d0f1a46))
+* replace --verbose flag with --log-level option for improved logging control ([3976eca](https://github.com/moontaiworks/fanbox-dl/commit/3976eca5a2ae26189b67a417edf096f53c46b610))
+* support creator post cursors ([733e58d](https://github.com/moontaiworks/fanbox-dl/commit/733e58d4089194d9d8625ce66bf7e8e48a7d7c8d))
+* use random use-agent ([ef4d506](https://github.com/moontaiworks/fanbox-dl/commit/ef4d506d9ff96c0634254c445ceb47af0cc0bbe1))
+
+### Bug Fixes
+
+* attach headers in downloader ([3cddcb2](https://github.com/moontaiworks/fanbox-dl/commit/3cddcb2f2ebcbd12a4a4677635eb29f7fcaabd9e))
+* debug log downloader response errors ([e07bd8a](https://github.com/moontaiworks/fanbox-dl/commit/e07bd8aca672c7bd5a7c7b3a0aee8b631f7b4423))
+* export fanbox api error ([da6aa5c](https://github.com/moontaiworks/fanbox-dl/commit/da6aa5c5196172437eb54e9ad8aa507c1c2a8a33))
+* flat and index contents in folder ([1c4dc83](https://github.com/moontaiworks/fanbox-dl/commit/1c4dc835d57e783ad229c6864de3e5dc68be2a14))
+* load fanbox cookies from cookies txt ([b7f0a43](https://github.com/moontaiworks/fanbox-dl/commit/b7f0a43a374cfd8db1ed9069b5d7b2521b51c413))
+* remove require command layer ([56b9dd4](https://github.com/moontaiworks/fanbox-dl/commit/56b9dd4751b89a9e0b0d147e8e9d924877b3a6ea))
+* support fanbox browser session headers ([afba685](https://github.com/moontaiworks/fanbox-dl/commit/afba685d51e514da74ac4ac0fb207f4ccd4d88f9))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
