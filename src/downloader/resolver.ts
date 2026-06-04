@@ -1,5 +1,5 @@
 export interface CreatorResolverClient {
-  listFollowingCreators(): Promise<{ creatorId: string }[]>;
+  listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
   listSupportingPlans(): Promise<{ creatorId: string }[]>;
 }
 
@@ -16,7 +16,8 @@ export async function resolveCreatorIds(
 ): Promise<string[]> {
   const creatorIds = new Set(options.creatorIds);
   if (options.following) {
-    for (const creator of await client.listFollowingCreators()) {
+    const { creators } = await client.listFollowingCreators();
+    for (const creator of creators) {
       creatorIds.add(creator.creatorId);
     }
   }

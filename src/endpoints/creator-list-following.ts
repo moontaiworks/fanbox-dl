@@ -2,4 +2,6 @@ import type { CreatorSummary } from "./models/creator.js";
 
 export const CREATOR_LIST_FOLLOWING_PATH = "creator.listFollowing";
 
-export type ListFollowingCreatorsResult = CreatorSummary[];
+export interface ListFollowingCreatorsResult {
+  creators: CreatorSummary[];
+}

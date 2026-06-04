@@ -6,7 +6,9 @@ describe("resolveCreatorIds", () => {
   it("unions explicit, following, and supporting creators before exclusions", async () => {
     const client = {
       listFollowingCreators: () =>
-        Promise.resolve([{ creatorId: "followed" }, { creatorId: "shared" }]),
+        Promise.resolve({
+          creators: [{ creatorId: "followed" }, { creatorId: "shared" }],
+        }),
       listSupportingPlans: () =>
         Promise.resolve([{ creatorId: "supported" }, { creatorId: "shared" }]),
     };
