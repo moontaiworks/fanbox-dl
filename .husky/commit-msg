@@ -1,1 +1,6 @@
-npx --no -- commitlint --edit $1
+message_file="$1"
+
+[ -z "$message_file" ] && exit 0
+[ ! -f "$message_file" ] && exit 0
+
+npx --no -- commitlint --edit "$message_file"
