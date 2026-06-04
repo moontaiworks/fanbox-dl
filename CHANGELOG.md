@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.0.0...v1.0.1) (2026-06-04)
+
+### Bug Fixes
+
+* correct following creators response structure ([fa93f8d](https://github.com/moontaiworks/fanbox-dl/commit/fa93f8d6e10c93a85b46807d8b0c3312e3829cd1))
+
 ## 1.0.0 (2026-06-04)
 
 ### Features
