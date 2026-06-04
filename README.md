@@ -58,12 +58,11 @@ npx @moontaiworks/fanbox-dl download \
   --output ./fanbox-downloads
 ```
 
-The downloader stores each post as `summary.json`, `metadata.json`,
-`content.md`, and asset files in a per-post directory. Asset file names include
-the post directory name and a two-digit sequence number, so files are easy to
-browse in order. It keeps a per-creator `manifest.json`, skips unchanged posts,
-resumes `.part` files with HTTP Range requests when supported, and can verify
-existing SHA-256 hashes:
+The downloader stores each post as `metadata.json`, `content.md`, and asset
+files in a per-post directory. Asset file names include the post directory name
+and a two-digit sequence number, so files are easy to browse in order. It keeps
+a per-creator `manifest.json`, skips unchanged posts, resumes `.part` files
+with HTTP Range requests when supported, and can verify existing SHA-256 hashes:
 
 ```bash
 fanbox-dl download --creator creator-id --verify-assets

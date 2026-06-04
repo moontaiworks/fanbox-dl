@@ -143,6 +143,9 @@ describe("syncCreator", () => {
     await expect(
       readFile(path.join(postDirectory, "metadata.json"), "utf8"),
     ).resolves.toContain('"type": "image"');
+    await expect(
+      stat(path.join(postDirectory, "summary.json")),
+    ).rejects.toThrow();
   });
 
   it("stores all post files directly in the creator directory in flat posts mode", async () => {
@@ -185,11 +188,8 @@ describe("syncCreator", () => {
       ),
     ).resolves.toContain('"type": "image"');
     await expect(
-      readFile(
-        path.join(creatorDirectory, "2026-05-27_123_Title_summary.json"),
-        "utf8",
-      ),
-    ).resolves.toContain('"id": "123"');
+      stat(path.join(creatorDirectory, "2026-05-27_123_Title_summary.json")),
+    ).rejects.toThrow();
     await expect(
       readFile(
         path.join(
@@ -225,9 +225,31 @@ describe("syncCreator", () => {
     });
 
     expect(postInfoCalls).toBe(0);
+    const creatorDirectory = path.join(directory, "creator");
     await expect(
-      readFile(path.join(directory, "creator", "manifest.json"), "utf8"),
+      readFile(path.join(creatorDirectory, "manifest.json"), "utf8"),
     ).resolves.toContain('"status": "skipped"');
+    await expect(
+      readFile(
+        path.join(
+          creatorDirectory,
+          "posts",
+          "2026-05-27_123_Title",
+          "metadata.json",
+        ),
+        "utf8",
+      ),
+    ).resolves.toContain('"isRestricted": true');
+    await expect(
+      stat(
+        path.join(
+          creatorDirectory,
+          "posts",
+          "2026-05-27_123_Title",
+          "summary.json",
+        ),
+      ),
+    ).rejects.toThrow();
   });
 
   it("redownloads a corrupted asset when verification is requested", async () => {

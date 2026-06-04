@@ -60,7 +60,6 @@ interface PostLayout {
   directory: string;
   metadataPath: string;
   postName: string;
-  summaryPath: string;
 }
 
 export async function syncCreator(
@@ -141,7 +140,6 @@ function createPostLayout(
       directory: ".",
       metadataPath: `${postName}_metadata.json`,
       postName,
-      summaryPath: `${postName}_summary.json`,
     };
   }
 
@@ -151,7 +149,6 @@ function createPostLayout(
     directory,
     metadataPath: path.posix.join(directory, "metadata.json"),
     postName,
-    summaryPath: path.posix.join(directory, "summary.json"),
   };
 }
 
@@ -324,15 +321,15 @@ async function syncPost(
   const postDirectory = path.join(creatorDirectory, entry.directory);
   assertPathBudget(postDirectory);
   await mkdir(postDirectory, { recursive: true });
-  await writeTimestampedJson(
-    path.join(creatorDirectory, layout.summaryPath),
-    summary,
-    summary.publishedDatetime,
-  );
   if (summary.isRestricted) {
     entry.restricted = true;
     entry.status = "skipped";
     entry.updatedDatetime = summary.updatedDatetime;
+    await writeTimestampedJson(
+      path.join(creatorDirectory, layout.metadataPath),
+      summary,
+      summary.publishedDatetime,
+    );
     await store.save(manifest);
     return;
   }
