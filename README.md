@@ -123,7 +123,7 @@ The SDK also provides `listHomePosts()` and `listSupportingPosts()` for
 authenticated timelines. It intentionally exposes read-only endpoints: it does
 not follow creators, like posts, or create comments.
 
-## Documentation
+### Documentation
 
 API documentation is automatically generated using [TypeDoc](https://typedoc.org/) and published to GitHub Pages.
 
