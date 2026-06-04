@@ -34,7 +34,7 @@ describe("parseDownloadOptions", () => {
       maxRetries: 5,
       output: "fanbox-downloads",
       rateLimitPauseMs: 60_000,
-      requestIntervalMs: 0,
+      requestIntervalMs: 500,
       supporting: false,
       userAgent: undefined,
       verifyAssets: false,

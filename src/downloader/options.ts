@@ -126,7 +126,7 @@ function parseDownloadArgs(args: string[]) {
         "max-retries": { default: "5", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
         "rate-limit-pause-ms": { default: "60000", type: "string" },
-        "request-interval-ms": { default: "0", type: "string" },
+        "request-interval-ms": { default: "500", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },
         "verify-assets": { default: false, type: "boolean" },

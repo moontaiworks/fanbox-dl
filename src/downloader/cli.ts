@@ -41,7 +41,7 @@ Download:
 
 Requests:
   --concurrency <n>         Concurrent requests. Default: 3.
-  --request-interval-ms <n> Delay between request starts. Default: 0.
+  --request-interval-ms <n> Delay between request starts. Default: 500.
   --rate-limit-pause-ms <n> Pause after 429 without Retry-After. Default: 60000.
   --max-retries <n>         Retry attempts. Default: 5.
 
