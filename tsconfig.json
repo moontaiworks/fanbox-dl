@@ -27,10 +27,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "paths": {
-      "#*": ["./src/*"],
-      "#tests/*": ["./tests/*"]
-    },
 
     // Remove comments from output
     "removeComments": true,

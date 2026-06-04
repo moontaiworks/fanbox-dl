@@ -6,9 +6,6 @@
     "rootDir": ".",
     "outDir": "../.tsbuild/src",
 
-    "paths": {
-      "#*": ["./src/*"]
-    },
     "lib": ["ES2024"],
     "types": ["node"],
     "noEmit": false,

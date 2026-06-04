@@ -26,10 +26,6 @@
       }
     }
   },
-  "imports": {
-    "#*": "./src/*",
-    "#tests/*": "./tests/*"
-  },
   "files": [
     "dist"
   ],

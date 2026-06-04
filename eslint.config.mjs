@@ -26,7 +26,6 @@ export default [
             ["parent", "sibling", "index"],
             ["object", "unknown"],
           ],
-          internalPattern: [/^(~\/|#)/.source],
         },
       ],
     },
