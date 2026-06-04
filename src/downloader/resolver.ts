@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 export interface CreatorResolverClient {
   listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
   listSupportingPlans(): Promise<{ creatorId: string }[]>;
@@ -30,5 +32,10 @@ export async function resolveCreatorIds(
     creatorIds.delete(ignored);
   }
 
-  return [...creatorIds];
+  const result = [...creatorIds];
+  logger.info("init.creators", `Got ${result.length} creators`, {
+    creatorIds: result,
+  });
+
+  return result;
 }
