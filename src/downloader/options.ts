@@ -69,7 +69,7 @@ export function parseDownloadOptions(
       values["request-interval-ms"],
     ),
     supporting: values.supporting,
-    userAgent: values["user-agent"] ?? env.FANBOX_USER_AGENT,
+    userAgent: values["user-agent"],
     verbose: values.verbose,
     verifyAssets: values["verify-assets"],
   };

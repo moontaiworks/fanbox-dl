@@ -9,76 +9,80 @@ A cli downloader or a read-only TypeScript SDK for building pixivFANBOX applicat
 
 ## CLI Downloader
 
-Install the package globally or run it through your package manager:
+Run the downloader through your package manager, or install it globally:
 
 ```bash
-npx @moontaiworks/fanbox-dl download \
-  --following \
+npx @moontaiworks/fanbox-dl download --creator creator-id
+```
+
+```bash
+npm install -g @moontaiworks/fanbox-dl
+fanbox-dl download --creator creator-id
+```
+
+Authenticated downloads read `FANBOX_SESSION_ID` by default:
+
+```bash
+FANBOX_SESSION_ID=your-session-id npx @moontaiworks/fanbox-dl download \
   --supporting \
-  --ignore-creator creator-to-skip \
   --output ./fanbox-downloads
 ```
 
+You can also pass a cookie file exported from your logged-in browser session:
+
+```bash
+npx @moontaiworks/fanbox-dl download \
+  --creator creator-id \
+  --cookie-file ./cookies.txt
+```
+
+Preview the selected creators and posts without downloading:
+
+```bash
+npx @moontaiworks/fanbox-dl download --creator creator-id --dry-run
+```
+
+At least one creator selector is required: `--creator`, `--following`, or
+`--supporting`.
+
+### CLI Options
+
+| Option                      | Description                                                                                            | Example                          | Default             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------------- |
+| `--creator <id>`            | Add a creator ID to download. Can be repeated.                                                         | `--creator alpha --creator beta` | None                |
+| `--following`               | Download posts from followed creators. Requires authentication.                                        | `--following`                    | `false`             |
+| `--supporting`              | Download posts from supporting creators. Requires authentication.                                      | `--supporting`                   | `false`             |
+| `--ignore-creator <id>`     | Exclude a creator ID from the selected creators. Can be repeated.                                      | `--ignore-creator beta`          | None                |
+| `--cookie <value>`          | Raw `FANBOXSESSID`, `FANBOXSESSID=...`, or a full Cookie header.                                       | `--cookie "FANBOXSESSID=..."`    | `FANBOX_SESSION_ID` |
+| `--cookie-file <path>`      | Read a raw cookie value or Netscape `cookies.txt`. FANBOX cookies are selected automatically.          | `--cookie-file ./cookies.txt`    | None                |
+| `--user-agent <value>`      | Send the same User-Agent as the browser session that produced your cookie.                             | `--user-agent "Mozilla/5.0 ..."` | random string       |
+| `--output <path>`           | Directory where downloaded creators and posts are stored.                                              | `--output ./fanbox-downloads`    | `fanbox-downloads`  |
+| `--dry-run`                 | List selected creators and discovered post summaries without writing files or requesting post details. | `--dry-run`                      | `false`             |
+| `--flat-posts`              | Store post files directly under each creator directory instead of one directory per post.              | `--flat-posts`                   | `false`             |
+| `--verify-assets`           | Verify existing asset size and SHA-256 before deciding whether to skip a file.                         | `--verify-assets`                | `false`             |
+| `--concurrency <n>`         | Maximum number of concurrent requests. Must be greater than `0`.                                       | `--concurrency 3`                | `3`                 |
+| `--request-interval-ms <n>` | Delay between request starts, in milliseconds.                                                         | `--request-interval-ms 1000`     | `0`                 |
+| `--rate-limit-pause-ms <n>` | Pause duration after HTTP 429 when FANBOX does not send `Retry-After`.                                 | `--rate-limit-pause-ms 60000`    | `60000`             |
+| `--max-retries <n>`         | Retry attempts for retryable request failures.                                                         | `--max-retries 5`                | `5`                 |
+| `--log-format json\|pretty` | Choose JSON Lines logs or human-readable logs.                                                         | `--log-format pretty`            | `json`              |
+| `--verbose`                 | Enable debug logs, including response status and body for FANBOX API errors.                           | `--verbose`                      | `false`             |
+| `--help`                    | Show CLI help.                                                                                         | `--help`                         | None                |
+
+### CLI Notes
+
 The downloader stores each post as `metadata.json`, `content.md`, and asset
 files in a per-post directory. Asset file names include a two-digit sequence
-number, so files are easy to browse in order. It keeps a per-creator
-`manifest.json`, skips unchanged posts, resumes `.part` files with HTTP Range
-requests when supported, and can verify existing SHA-256 hashes:
+number, so files are easy to browse in order.
 
-```bash
-fanbox-dl download --creator creator-id --verify-assets
-```
+It keeps a per-creator `manifest.json`, skips unchanged posts, resumes `.part`
+files with HTTP Range requests when supported, and can verify existing SHA-256
+hashes with `--verify-assets`.
 
-Preview the selected creators and discovered post summaries without writing
-files or requesting post details:
-
-```bash
-fanbox-dl download --creator creator-id --dry-run
-```
-
-To place all post files directly under each creator directory instead of using
-one directory per post, enable flat post layout. In this mode, generated file
-names include the post name to avoid collisions:
-
-```bash
-fanbox-dl download --creator creator-id --flat-posts
-```
-
-Authenticated downloads read `FANBOX_SESSION_ID` by default. You can override
-it with `--cookie-file` or `--cookie`. Passing `--cookie` is convenient but may
-leave the session value in shell history.
-
-If FANBOX returns a Cloudflare block page, use the same `User-Agent` as the
-browser session that produced your cookie:
-
-```bash
-fanbox-dl download \
-  --creator creator-id \
-  --cookie-file ./cookies.txt \
-  --user-agent "Mozilla/5.0 ..."
-```
-
-`--cookie-file` accepts either a raw cookie value or a Netscape cookies.txt
-export from your own logged-in browser session. When using cookies.txt, FANBOX
-cookies such as `FANBOXSESSID` and `cf_clearance` are selected automatically.
-`--cookie` may also contain a full Cookie header, for example
-`FANBOXSESSID=...; cf_clearance=...`.
-
-Useful request controls:
-
-```bash
-fanbox-dl download \
-  --supporting \
-  --concurrency 3 \
-  --request-interval-ms 1000 \
-  --rate-limit-pause-ms 60000 \
-  --max-retries 5
-```
-
-Logs use JSON Lines by default. Add `--log-format pretty` for interactive use.
-Use `--verbose` to include debug logs, including response status and body for
-FANBOX API errors. When FANBOX responds with HTTP 429, all new requests pause
-before retrying.
+Passing `--cookie` is convenient but may leave the session value in shell
+history. `--cookie-file` accepts either a raw cookie value or a Netscape
+`cookies.txt` export from your own logged-in browser session. When using
+`cookies.txt`, FANBOX cookies such as `FANBOXSESSID` and `cf_clearance` are
+selected automatically.
 
 Run `fanbox-dl --help` for the full CLI option list.
 

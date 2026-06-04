@@ -92,11 +92,14 @@ describe("parseDownloadOptions", () => {
     expect(options.cookie).toBe("cf_clearance=clearance; FANBOXSESSID=session");
   });
 
-  it("parses user agent from option before environment", () => {
-    const options = parseDownloadOptions(
-      ["download", "--creator", "alpha", "--user-agent", "cli agent"],
-      { FANBOX_USER_AGENT: "env agent" },
-    );
+  it("parses user agent from option", () => {
+    const options = parseDownloadOptions([
+      "download",
+      "--creator",
+      "alpha",
+      "--user-agent",
+      "cli agent",
+    ]);
 
     expect(options.userAgent).toBe("cli agent");
   });
