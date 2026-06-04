@@ -1,9 +1,20 @@
 import { Readable } from "node:stream";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { HttpResponse } from "../http.js";
+import { logger } from "./logger.js";
 import { RequestScheduler } from "./scheduler.js";
+
+function captureLogs(
+  entries: unknown[],
+  level: "debug" | "warn" = "debug",
+): void {
+  logger.configure({
+    level,
+    write: (line) => entries.push(JSON.parse(line) as unknown),
+  });
+}
 
 function response(
   body: unknown,
@@ -24,6 +35,10 @@ function response(
 }
 
 describe("RequestScheduler", () => {
+  afterEach(() => {
+    logger.configure({ level: "silent", write: () => undefined });
+  });
+
   it("limits concurrent operations", async () => {
     let active = 0;
     let maximumActive = 0;
@@ -44,19 +59,12 @@ describe("RequestScheduler", () => {
 
   it("retries rate limited responses after the configured pause", async () => {
     const sleeps: number[] = [];
-    const events: string[] = [];
+    const entries: unknown[] = [];
     let attempts = 0;
     let now = 0;
+    captureLogs(entries, "warn");
     const scheduler = new RequestScheduler({
       concurrency: 1,
-      logger: {
-        debug: () => undefined,
-        error: () => undefined,
-        info: () => undefined,
-        warn: (event) => {
-          events.push(event);
-        },
-      },
       now: () => now,
       rateLimitPauseMs: 60_000,
       sleep: (milliseconds) => {
@@ -81,6 +89,11 @@ describe("RequestScheduler", () => {
     expect(await result.text()).toBe("ok");
     expect(attempts).toBe(2);
     expect(sleeps).toContain(2_000);
+    const events = entries.map((entry) =>
+      typeof entry === "object" && entry !== null && "event" in entry
+        ? entry.event
+        : undefined,
+    );
     expect(events).toEqual(["request.rate-limit.pause", "request.retry"]);
   });
 
@@ -100,14 +113,9 @@ describe("RequestScheduler", () => {
   it("debug logs retryable response bodies before retrying", async () => {
     const entries: unknown[] = [];
     let attempts = 0;
+    captureLogs(entries);
     const scheduler = new RequestScheduler({
       concurrency: 1,
-      logger: {
-        debug: (event, _message, fields) => entries.push({ event, ...fields }),
-        error: () => undefined,
-        info: () => undefined,
-        warn: () => undefined,
-      },
       maxRetries: 1,
     });
 

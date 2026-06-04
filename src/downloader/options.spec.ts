@@ -56,7 +56,7 @@ describe("parseDownloadOptions", () => {
   it("rejects an unknown log level", () => {
     expect(() =>
       parseDownloadOptions(
-        ["download", "--creator", "alpha", "--log-level", "trace"],
+        ["download", "--creator", "alpha", "--log-level", "level"],
         {},
       ),
     ).toThrow(CliUsageError);

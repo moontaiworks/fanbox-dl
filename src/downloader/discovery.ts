@@ -4,8 +4,7 @@ import type {
   PostSummary,
 } from "../types.js";
 import { logDebugErrorResponse } from "./errors.js";
-import type { Logger } from "./logger.js";
-import { silentLogger } from "./logger.js";
+import { logger } from "./logger.js";
 
 const DEFAULT_PAGE_SIZE = 300;
 
@@ -15,17 +14,14 @@ export interface CreatorPostClient {
 }
 
 export interface DiscoverCreatorPostsOptions {
-  logger?: Logger;
   pageSize?: number;
 }
 
 export async function discoverCreatorPosts(
   client: CreatorPostClient,
   creatorId: string,
-  options: DiscoverCreatorPostsOptions = {},
+  { pageSize = DEFAULT_PAGE_SIZE }: DiscoverCreatorPostsOptions = {},
 ): Promise<PostSummary[]> {
-  const logger = options.logger ?? silentLogger;
-  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
   const found = new Map<string, PostSummary>();
   let cursor: ListCreatorPostsParams = {
     creatorId,

@@ -3,15 +3,22 @@ import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { FanboxApiError } from "../client.js";
 import type { HttpRequest, HttpResponse } from "../http.js";
 import type { ImagePost, PostSummary } from "../types.js";
 import { AssetDownloader } from "./asset.js";
-import type { Logger } from "./logger.js";
+import { logger } from "./logger.js";
 import { RequestScheduler } from "./scheduler.js";
 import { syncCreator } from "./sync.js";
+
+function captureLogs(entries: unknown[]): void {
+  logger.configure({
+    level: "debug",
+    write: (line) => entries.push(JSON.parse(line) as unknown),
+  });
+}
 
 function post(extension = "png"): ImagePost {
   return {
@@ -85,16 +92,11 @@ function summary(restricted = false, title = "Title"): PostSummary {
   };
 }
 
-function testLogger(entries: unknown[]): Logger {
-  return {
-    debug: (event, _message, fields) => entries.push({ event, ...fields }),
-    error: (event, _message, fields) => entries.push({ event, ...fields }),
-    info: () => undefined,
-    warn: () => undefined,
-  };
-}
-
 describe("syncCreator", () => {
+  afterEach(() => {
+    logger.configure({ level: "silent", write: () => undefined });
+  });
+
   it("downloads a post once and skips unchanged content on the next run", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
     let postInfoCalls = 0;
@@ -405,6 +407,7 @@ describe("syncCreator", () => {
   it("debug logs post info API error responses", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
     const entries: unknown[] = [];
+    captureLogs(entries);
     const client = {
       getPost: () =>
         Promise.reject(
@@ -423,7 +426,6 @@ describe("syncCreator", () => {
       }),
       client,
       creatorId: "creator",
-      logger: testLogger(entries),
       outputDirectory: directory,
     });
 
@@ -440,6 +442,7 @@ describe("syncCreator", () => {
   it("debug logs asset response bodies when downloads fail", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-sync-"));
     const entries: unknown[] = [];
+    captureLogs(entries);
     const client = {
       getPost: () => Promise.resolve(post()),
       listCreatorPosts: () => Promise.resolve([summary()]),
@@ -458,7 +461,6 @@ describe("syncCreator", () => {
       assetDownloader,
       client,
       creatorId: "creator",
-      logger: testLogger(entries),
       outputDirectory: directory,
     });
 

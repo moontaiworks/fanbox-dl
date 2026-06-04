@@ -19,7 +19,7 @@ import type {
 import type { AssetDownloader } from "./asset.js";
 import { type CreatorPostClient, discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { type Logger, silentLogger } from "./logger.js";
+import { logger } from "./logger.js";
 import {
   type AssetManifestEntry,
   type CreatorManifest,
@@ -44,7 +44,6 @@ export interface SyncCreatorOptions {
   client: SyncClient;
   creatorId: string;
   flatPosts?: boolean;
-  logger?: Logger;
   outputDirectory: string;
   verifyAssets?: boolean;
 }
@@ -70,9 +69,6 @@ export async function syncCreator(
   for (const summary of await discoverCreatorPosts(
     options.client,
     options.creatorId,
-    {
-      logger: options.logger,
-    },
   )) {
     await syncPost(options, manifest, summary, store);
   }
@@ -288,7 +284,6 @@ async function syncPost(
   summary: PostSummary,
   store: ManifestStore,
 ): Promise<void> {
-  const logger = options.logger ?? silentLogger;
   const creatorDirectory = path.join(
     options.outputDirectory,
     createCreatorDirectoryName(options.creatorId, options.outputDirectory),

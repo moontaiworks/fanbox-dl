@@ -1,9 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { FanboxApiError } from "../client.js";
 import type { PostSummary } from "../types.js";
 import { discoverCreatorPosts } from "./discovery.js";
-import type { Logger } from "./logger.js";
+import { logger } from "./logger.js";
+
+function captureLogs(entries: unknown[]): void {
+  logger.configure({
+    level: "debug",
+    write: (line) => entries.push(JSON.parse(line) as unknown),
+  });
+}
 
 function summary(id: string): PostSummary {
   return {
@@ -27,16 +34,11 @@ function summary(id: string): PostSummary {
   };
 }
 
-function testLogger(entries: unknown[]): Logger {
-  return {
-    debug: (event, _message, fields) => entries.push({ event, ...fields }),
-    error: () => undefined,
-    info: () => undefined,
-    warn: () => undefined,
-  };
-}
-
 describe("discoverCreatorPosts", () => {
+  afterEach(() => {
+    logger.configure({ level: "silent", write: () => undefined });
+  });
+
   it("uses an inclusive direct cursor and deduplicates the anchor", async () => {
     const calls: { firstId?: string }[] = [];
     const client = {
@@ -92,6 +94,7 @@ describe("discoverCreatorPosts", () => {
   it("debug logs direct cursor API error responses before fallback", async () => {
     const entries: unknown[] = [];
     let directCalls = 0;
+    captureLogs(entries);
     const client = {
       listCreatorPosts: () => {
         directCalls += 1;
@@ -112,9 +115,7 @@ describe("discoverCreatorPosts", () => {
         ]),
     };
 
-    await discoverCreatorPosts(client, "creator", {
-      logger: testLogger(entries),
-    });
+    await discoverCreatorPosts(client, "creator");
 
     expect(entries).toContainEqual(
       expect.objectContaining({

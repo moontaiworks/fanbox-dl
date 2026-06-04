@@ -1,74 +1,78 @@
-export interface CreateLoggerOptions {
+import { formatWithOptions } from "node:util";
+
+export type LogFields = Record<string, unknown>;
+
+export type Logger = Record<
+  LogLevel,
+  (event: string, message?: string, fields?: LogFields) => void
+> & {
+  configure: (options: CreateLoggerOptions) => void;
+  raw: (line: string) => void;
+};
+
+export type LogLevel = "debug" | "error" | "info" | "silent" | "trace" | "warn";
+
+interface CreateLoggerOptions {
   format?: "json" | "pretty";
   level?: LogLevel;
   write?: (line: string) => void;
 }
 
-export type LogFields = Record<string, unknown>;
-
-export interface Logger {
-  debug(event: string, message: string, fields?: LogFields): void;
-  error(event: string, message: string, fields?: LogFields): void;
-  info(event: string, message: string, fields?: LogFields): void;
-  warn(event: string, message: string, fields?: LogFields): void;
-}
-
-export type LogLevel = "debug" | "error" | "info" | "warn";
-
 const LEVEL_WEIGHTS: Record<LogLevel, number> = {
   debug: 10,
   error: 40,
   info: 20,
+  silent: 0,
+  trace: 5,
   warn: 30,
 };
 
-export function createLogger(options: CreateLoggerOptions = {}): Logger {
-  const format = options.format ?? "json";
-  const minimumLevel = options.level ?? "info";
-  const write =
-    options.write ?? ((line: string) => process.stdout.write(`${line}\n`));
-  const log = (
-    level: LogLevel,
-    event: string,
-    message: string,
-    fields: LogFields = {},
-  ) => {
-    if (LEVEL_WEIGHTS[level] < LEVEL_WEIGHTS[minimumLevel]) {
-      return;
-    }
-    const entry = {
-      event,
-      level,
-      msg: message,
-      time: new Date().toISOString(),
-      ...fields,
+function createLogger({
+  format = "json",
+  level: minimumLevel = "info",
+  write = (line: string) => process.stdout.write(`${line}\n`),
+}: CreateLoggerOptions = {}): Logger {
+  const createLogFn = (level: LogLevel) =>
+    function log(event: string, message?: string, fields: LogFields = {}) {
+      const levelWeight = LEVEL_WEIGHTS[level];
+      if (!levelWeight || levelWeight < LEVEL_WEIGHTS[minimumLevel]) {
+        return;
+      }
+
+      const payload = {
+        event,
+        level,
+        msg: message,
+        time: new Date().toISOString(),
+        ...fields,
+      };
+      write(
+        format === "json"
+          ? JSON.stringify(payload)
+          : `${payload.time} ${level.toUpperCase()} ${event} ${message?.concat(" ")}${formatWithOptions({ colors: true, depth: Infinity }, fields)}`,
+      );
     };
-    write(
-      format === "json"
-        ? JSON.stringify(entry)
-        : `${entry.time} ${level.toUpperCase()} ${event} ${message} ${JSON.stringify(fields)}`,
-    );
-  };
 
   return {
-    debug: (event, message, fields) => {
-      log("debug", event, message, fields);
+    configure({
+      format: newFormat = format,
+      level: newMinimumLevel = minimumLevel,
+      write: newWrite = write,
+    }: CreateLoggerOptions) {
+      format = newFormat;
+      minimumLevel = newMinimumLevel;
+      write = newWrite;
     },
-    error: (event, message, fields) => {
-      log("error", event, message, fields);
+    debug: createLogFn("debug"),
+    error: createLogFn("error"),
+    info: createLogFn("info"),
+    raw: (line: string) => {
+      write(line);
     },
-    info: (event, message, fields) => {
-      log("info", event, message, fields);
-    },
-    warn: (event, message, fields) => {
-      log("warn", event, message, fields);
-    },
+    silent: createLogFn("silent"),
+    trace: createLogFn("trace"),
+    warn: createLogFn("warn"),
   };
 }
 
-export const silentLogger: Logger = {
-  debug: () => undefined,
-  error: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-};
+export const logger = createLogger();

@@ -42,7 +42,9 @@ export function parseDownloadOptions(
     throw new CliUsageError("log-format must be json or pretty");
   }
   if (!isLogLevel(values["log-level"])) {
-    throw new CliUsageError("log-level must be debug, info, warn, or error");
+    throw new CliUsageError(
+      "log-level must be trace, debug, info, warn, error or silent",
+    );
   }
 
   const cookieFile = values["cookie-file"];
@@ -86,12 +88,7 @@ function isFanboxCookieDomain(domain: string): boolean {
 }
 
 function isLogLevel(value: string): value is LogLevel {
-  return (
-    value === "debug" ||
-    value === "info" ||
-    value === "warn" ||
-    value === "error"
-  );
+  return ["debug", "error", "info", "silent", "trace", "warn"].includes(value);
 }
 
 function normalizeCookie(cookie?: string): string | undefined {

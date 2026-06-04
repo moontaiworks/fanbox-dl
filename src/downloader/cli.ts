@@ -4,7 +4,7 @@ import { Http2Transport, type HttpTransport } from "../http.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { createLogger, type Logger } from "./logger.js";
+import { logger } from "./logger.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
 import { assertPathBudget } from "./path.js";
 import { resolveCreatorIds } from "./resolver.js";
@@ -13,7 +13,6 @@ import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
   transport?: HttpTransport;
-  write?: (line: string) => void;
 }
 
 export const DOWNLOAD_HELP = `Usage: fanbox-dl download [options]
@@ -56,23 +55,17 @@ export async function runCli(
   env: NodeJS.ProcessEnv = process.env,
   dependencies: RunCliDependencies = {},
 ): Promise<number> {
-  const write =
-    dependencies.write ?? ((line: string) => process.stderr.write(`${line}\n`));
   if (args.includes("--help") || args.includes("-h")) {
-    write(DOWNLOAD_HELP);
+    logger.raw(DOWNLOAD_HELP);
     return 0;
   }
 
-  let logger: Logger | undefined;
   let transportToClose: HttpTransport | undefined;
   try {
-    const options = parseDownloadOptions(args, env);
+    const { logFormat, logLevel, ...options } = parseDownloadOptions(args, env);
+    logger.configure({ format: logFormat, level: logLevel });
     assertPathBudget(options.output);
-    logger = createLogger({
-      format: options.logFormat,
-      level: options.logLevel,
-      write: dependencies.write,
-    });
+
     const transport = dependencies.transport ?? new Http2Transport();
     transportToClose = dependencies.transport ? undefined : transport;
     const requestHeaders = createFanboxRequestHeaders({
@@ -81,7 +74,6 @@ export async function runCli(
     });
     const scheduler = new RequestScheduler({
       concurrency: options.concurrency,
-      logger,
       maxRetries: options.maxRetries,
       rateLimitPauseMs: options.rateLimitPauseMs,
       requestIntervalMs: options.requestIntervalMs,
@@ -101,9 +93,7 @@ export async function runCli(
         logger.info("dry-run.creator", "Dry-run creator selected", {
           creatorId,
         });
-        for (const post of await discoverCreatorPosts(client, creatorId, {
-          logger,
-        })) {
+        for (const post of await discoverCreatorPosts(client, creatorId)) {
           logger.info("dry-run.post", "Dry-run post discovered", {
             creatorId,
             postId: post.id,
@@ -131,7 +121,6 @@ export async function runCli(
           client,
           creatorId,
           flatPosts: options.flatPosts,
-          logger,
           outputDirectory: options.output,
           verifyAssets: options.verifyAssets,
         });
@@ -151,24 +140,23 @@ export async function runCli(
 
     return failed ? 1 : 0;
   } catch (error) {
-    const usage = error instanceof CliUsageError;
+    const isMisUsage = error instanceof CliUsageError;
     const message = String(error);
-    if (usage) {
-      write(`${message}\n\n${DOWNLOAD_HELP}`);
-    } else {
-      if (logger) {
-        logDebugErrorResponse(logger, error);
-      }
-      write(
-        JSON.stringify({
-          event: "cli.failed",
-          level: "error",
-          msg: message,
-          time: new Date().toISOString(),
-        }),
-      );
+    if (isMisUsage) {
+      logger.raw(`${message}\n\n${DOWNLOAD_HELP}`);
+      return 2;
     }
-    return usage ? 2 : 1;
+
+    logDebugErrorResponse(logger, error);
+    logger.raw(
+      JSON.stringify({
+        event: "cli.failed",
+        level: "error",
+        msg: message,
+        time: new Date().toISOString(),
+      }),
+    );
+    return 1;
   } finally {
     await transportToClose?.close();
   }

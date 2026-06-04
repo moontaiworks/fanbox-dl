@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
 import { runCli } from "./cli.js";
+import { logger } from "./logger.js";
 
 function headers(input: HttpRequest | string | URL): Headers {
   if (typeof input === "string" || input instanceof URL) {
@@ -67,10 +68,9 @@ function summary() {
 describe("runCli", () => {
   it("prints help and exits successfully", async () => {
     const lines: string[] = [];
+    logger.configure({ write: (line) => lines.push(line) });
 
-    await expect(
-      runCli(["--help"], {}, { write: (line) => lines.push(line) }),
-    ).resolves.toBe(0);
+    await expect(runCli(["--help"], {})).resolves.toBe(0);
 
     expect(lines.join("\n")).toContain("Usage: fanbox-dl download [options]");
     expect(lines.join("\n")).toContain("--dry-run");
@@ -82,10 +82,9 @@ describe("runCli", () => {
 
   it("prints usage guidance for empty input", async () => {
     const lines: string[] = [];
+    logger.configure({ write: (line) => lines.push(line) });
 
-    await expect(
-      runCli([], {}, { write: (line) => lines.push(line) }),
-    ).resolves.toBe(2);
+    await expect(runCli([], {})).resolves.toBe(2);
 
     expect(lines.join("\n")).toContain("Usage: fanbox-dl download [options]");
     expect(lines.join("\n")).toContain("at least one creator selector");
@@ -143,10 +142,9 @@ describe("runCli", () => {
 
   it("returns exit code two for invalid usage", async () => {
     const lines: string[] = [];
+    logger.configure({ write: (line) => lines.push(line) });
 
-    await expect(
-      runCli(["download"], {}, { write: (line) => lines.push(line) }),
-    ).resolves.toBe(2);
+    await expect(runCli(["download"], {})).resolves.toBe(2);
 
     expect(lines.join("\n")).toContain("at least one creator selector");
   });
@@ -155,6 +153,7 @@ describe("runCli", () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "fanbox-cli-"));
     let postInfoCalls = 0;
     const lines: string[] = [];
+    logger.configure({ write: (line) => lines.push(line) });
     const transport: HttpTransport = {
       close: () => Promise.resolve(),
       request: (input) => {
@@ -181,7 +180,7 @@ describe("runCli", () => {
           "--dry-run",
         ],
         {},
-        { transport, write: (line) => lines.push(line) },
+        { transport },
       ),
     ).resolves.toBe(0);
 
@@ -193,6 +192,7 @@ describe("runCli", () => {
 
   it("writes response debug logs for API errors when log level is debug", async () => {
     const lines: string[] = [];
+    logger.configure({ write: (line) => lines.push(line) });
     const transport: HttpTransport = {
       close: () => Promise.resolve(),
       request: () =>
@@ -215,7 +215,7 @@ describe("runCli", () => {
           "debug",
         ],
         {},
-        { transport, write: (line) => lines.push(line) },
+        { transport },
       ),
     ).resolves.toBe(1);
 
@@ -238,7 +238,7 @@ describe("runCli", () => {
       runCli(
         ["download", "--creator", "creator", "--dry-run", "--user-agent", "ua"],
         {},
-        { transport, write: () => undefined },
+        { transport },
       ),
     ).resolves.toBe(0);
 

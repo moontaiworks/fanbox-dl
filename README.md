@@ -65,7 +65,7 @@ At least one creator selector is required: `--creator`, `--following`, or
 | `--rate-limit-pause-ms <n>` | Pause duration after HTTP 429 when FANBOX does not send `Retry-After`.                                 | `--rate-limit-pause-ms 60000`    | `60000`             |
 | `--max-retries <n>`         | Retry attempts for retryable request failures.                                                         | `--max-retries 5`                | `5`                 |
 | `--log-format json\|pretty` | Choose JSON Lines logs or human-readable logs.                                                         | `--log-format pretty`            | `json`              |
-| `--log-level <level>`       | Show logs at this level or higher. One of `debug`, `info`, `warn`, or `error`.                         | `--log-level debug`              | `info`              |
+| `--log-level <level>`       | Show logs at this level or higher. One of `trace`, `debug`, `info`, `warn`, `error` or `silent`.       | `--log-level trace`              | `info`              |
 | `--help`                    | Show CLI help.                                                                                         | `--help`                         | None                |
 
 ### CLI Notes

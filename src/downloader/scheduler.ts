@@ -1,7 +1,7 @@
 import type { HttpResponse } from "../http.js";
 import { logDebugResponse } from "./errors.js";
 import type { Logger } from "./logger.js";
-import { silentLogger } from "./logger.js";
+import { logger } from "./logger.js";
 
 export interface RequestSchedulerOptions {
   concurrency: number;
@@ -16,7 +16,6 @@ export interface RequestSchedulerOptions {
 export class RequestScheduler {
   #active = 0;
   readonly #concurrency: number;
-  readonly #logger: Logger;
   readonly #maxRetries: number;
   #nextStartAt = 0;
   readonly #now: () => number;
@@ -31,7 +30,6 @@ export class RequestScheduler {
       throw new Error("concurrency must be a positive integer");
     }
     this.#concurrency = options.concurrency;
-    this.#logger = options.logger ?? silentLogger;
     this.#maxRetries = options.maxRetries ?? 5;
     this.#now = options.now ?? Date.now;
     this.#rateLimitPauseMs = options.rateLimitPauseMs ?? 60_000;
@@ -56,14 +54,14 @@ export class RequestScheduler {
         ) {
           return response;
         }
-        await logDebugResponse(this.#logger, response, {
+        await logDebugResponse(logger, response, {
           attempt: attempt + 1,
         });
         if (response.status === 429) {
           const pauseMs =
             parseRetryAfter(response, this.#now()) ?? this.#rateLimitPauseMs;
           this.pause(pauseMs);
-          this.#logger.warn(
+          logger.warn(
             "request.rate-limit.pause",
             "Rate limit reached; pausing requests",
             { pauseMs },
@@ -74,7 +72,7 @@ export class RequestScheduler {
           throw error;
         }
       }
-      this.#logger.warn("request.retry", "Retrying request", {
+      logger.warn("request.retry", "Retrying request", {
         attempt: attempt + 1,
       });
       attempt += 1;
