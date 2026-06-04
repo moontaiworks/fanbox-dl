@@ -12,6 +12,14 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
+    ignore:
+      # Keep these aligned with the runtime/toolchain major versions in package.json.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
     groups:
       prod-dependencies:
         dependency-type: "production"
