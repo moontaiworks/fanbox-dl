@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
+import type { LogLevel } from "./logger.js";
+
 export interface DownloadOptions {
   concurrency: number;
   cookie?: string;
@@ -10,13 +12,13 @@ export interface DownloadOptions {
   following: boolean;
   ignoreCreatorIds: string[];
   logFormat: "json" | "pretty";
+  logLevel: LogLevel;
   maxRetries: number;
   output: string;
   rateLimitPauseMs: number;
   requestIntervalMs: number;
   supporting: boolean;
   userAgent?: string;
-  verbose: boolean;
   verifyAssets: boolean;
 }
 
@@ -39,6 +41,9 @@ export function parseDownloadOptions(
   if (values["log-format"] !== "json" && values["log-format"] !== "pretty") {
     throw new CliUsageError("log-format must be json or pretty");
   }
+  if (!isLogLevel(values["log-level"])) {
+    throw new CliUsageError("log-level must be debug, info, warn, or error");
+  }
 
   const cookieFile = values["cookie-file"];
   const cookie = normalizeCookie(
@@ -58,6 +63,7 @@ export function parseDownloadOptions(
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
     logFormat: values["log-format"],
+    logLevel: values["log-level"],
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
     rateLimitPauseMs: parseNonNegativeInteger(
@@ -70,7 +76,6 @@ export function parseDownloadOptions(
     ),
     supporting: values.supporting,
     userAgent: values["user-agent"],
-    verbose: values.verbose,
     verifyAssets: values["verify-assets"],
   };
 }
@@ -78,6 +83,15 @@ export function parseDownloadOptions(
 function isFanboxCookieDomain(domain: string): boolean {
   const normalized = domain.replace(/^\./, "").toLowerCase();
   return normalized === "fanbox.cc" || normalized.endsWith(".fanbox.cc");
+}
+
+function isLogLevel(value: string): value is LogLevel {
+  return (
+    value === "debug" ||
+    value === "info" ||
+    value === "warn" ||
+    value === "error"
+  );
 }
 
 function normalizeCookie(cookie?: string): string | undefined {
@@ -108,13 +122,13 @@ function parseDownloadArgs(args: string[]) {
         following: { default: false, type: "boolean" },
         "ignore-creator": { multiple: true, type: "string" },
         "log-format": { default: "json", type: "string" },
+        "log-level": { default: "info", type: "string" },
         "max-retries": { default: "5", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
         "rate-limit-pause-ms": { default: "60000", type: "string" },
         "request-interval-ms": { default: "0", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },
-        verbose: { default: false, type: "boolean" },
         "verify-assets": { default: false, type: "boolean" },
       },
       strict: true,

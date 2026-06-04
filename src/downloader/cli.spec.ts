@@ -76,6 +76,8 @@ describe("runCli", () => {
     expect(lines.join("\n")).toContain("--dry-run");
     expect(lines.join("\n")).toContain("--flat-posts");
     expect(lines.join("\n")).toContain("--user-agent");
+    expect(lines.join("\n")).toContain("--log-level");
+    expect(lines.join("\n")).not.toContain("--verbose");
   });
 
   it("prints usage guidance for empty input", async () => {
@@ -189,7 +191,7 @@ describe("runCli", () => {
     expect(lines.join("\n")).toContain('"postId":"123"');
   });
 
-  it("writes response debug logs for API errors when verbose is enabled", async () => {
+  it("writes response debug logs for API errors when log level is debug", async () => {
     const lines: string[] = [];
     const transport: HttpTransport = {
       close: () => Promise.resolve(),
@@ -204,7 +206,14 @@ describe("runCli", () => {
 
     await expect(
       runCli(
-        ["download", "--creator", "creator", "--dry-run", "--verbose"],
+        [
+          "download",
+          "--creator",
+          "creator",
+          "--dry-run",
+          "--log-level",
+          "debug",
+        ],
         {},
         { transport, write: (line) => lines.push(line) },
       ),

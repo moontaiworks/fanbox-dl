@@ -47,7 +47,7 @@ Requests:
 
 Output:
   --log-format json|pretty  Default: json.
-  --verbose                 Enable debug logs.
+  --log-level <level>       debug|info|warn|error. Default: info.
   --help                    Show this help.
 `;
 
@@ -70,7 +70,7 @@ export async function runCli(
     assertPathBudget(options.output);
     logger = createLogger({
       format: options.logFormat,
-      level: options.verbose ? "debug" : "info",
+      level: options.logLevel,
       write: dependencies.write,
     });
     const transport = dependencies.transport ?? new Http2Transport();

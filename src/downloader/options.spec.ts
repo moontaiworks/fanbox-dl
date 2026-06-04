@@ -30,27 +30,36 @@ describe("parseDownloadOptions", () => {
       following: true,
       ignoreCreatorIds: ["beta"],
       logFormat: "json",
+      logLevel: "info",
       maxRetries: 5,
       output: "fanbox-downloads",
       rateLimitPauseMs: 60_000,
       requestIntervalMs: 0,
       supporting: false,
       userAgent: undefined,
-      verbose: false,
       verifyAssets: false,
     });
   });
 
-  it("parses dry run and verbose flags", () => {
+  it("parses dry run and log level", () => {
     const options = parseDownloadOptions(
-      ["download", "--creator", "alpha", "--dry-run", "--verbose"],
+      ["download", "--creator", "alpha", "--dry-run", "--log-level", "debug"],
       {},
     );
 
     expect(options).toMatchObject({
       dryRun: true,
-      verbose: true,
+      logLevel: "debug",
     });
+  });
+
+  it("rejects an unknown log level", () => {
+    expect(() =>
+      parseDownloadOptions(
+        ["download", "--creator", "alpha", "--log-level", "trace"],
+        {},
+      ),
+    ).toThrow(CliUsageError);
   });
 
   it("parses flat posts mode", () => {
