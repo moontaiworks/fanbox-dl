@@ -7,6 +7,11 @@ export type Logger = Record<
   (event: string, message?: string, fields?: LogFields) => void
 > & {
   configure: (options: CreateLoggerOptions) => void;
+  log: (
+    event: string,
+    message?: string,
+    fieldsByLevel?: Partial<Record<LogLevel, LogFields>>,
+  ) => void;
   raw: (line: string) => void;
 };
 
@@ -66,6 +71,15 @@ function createLogger({
     debug: createLogFn("debug"),
     error: createLogFn("error"),
     info: createLogFn("info"),
+    log: (event, message, fieldsByLevel) => {
+      const levels: LogLevel[] = ["trace", "debug", "info", "warn", "error"];
+      for (const level of levels) {
+        const fields = fieldsByLevel?.[level];
+        if (!fields) continue;
+        createLogFn(level)(event, message, fields);
+        return;
+      }
+    },
     raw: (line: string) => {
       write(line);
     },
