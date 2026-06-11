@@ -9,6 +9,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import { logger } from "../logger.js";
 import type {
   ArticlePost,
   FilePost,
@@ -19,7 +20,6 @@ import type {
 import type { AssetDownloader } from "./asset.js";
 import { type CreatorPostClient, discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { logger } from "./logger.js";
 import {
   type AssetManifestEntry,
   type CreatorManifest,

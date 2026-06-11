@@ -1,5 +1,5 @@
 import type { HttpResponse } from "../http.js";
-import type { LogFields, Logger } from "./logger.js";
+import type { LogFields, Logger } from "../logger.js";
 
 interface ResponseLikeError {
   body: unknown;

@@ -1,10 +1,10 @@
 import { FanboxClient } from "../client.js";
 import { createFanboxRequestHeaders } from "../fanbox-headers.js";
 import { Http2Transport, type HttpTransport } from "../http.js";
+import { logger } from "../logger.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { logger } from "./logger.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
 import { assertPathBudget } from "./path.js";
 import { resolveCreatorIds } from "./resolver.js";
@@ -114,7 +114,7 @@ export async function runCli(
     });
     let failed = false;
     for (const creatorId of creatorIds) {
-      logger.info("creator.sync.start", "Creator sync started", { creatorId });
+      logger.info("creator.sync.start", undefined, { creatorId });
       try {
         const manifest = await syncCreator({
           assetDownloader,
@@ -125,13 +125,11 @@ export async function runCli(
           verifyAssets: options.verifyAssets,
         });
         failed ||= hasFailures(manifest);
-        logger.info("creator.sync.complete", "Creator sync completed", {
-          creatorId,
-        });
+        logger.info("creator.sync.complete", undefined, { creatorId });
       } catch (error) {
         failed = true;
         logDebugErrorResponse(logger, error);
-        logger.error("creator.sync.failed", "Creator sync failed", {
+        logger.error("creator.sync.failed", undefined, {
           creatorId,
           error: String(error),
         });

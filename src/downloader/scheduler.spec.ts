@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { HttpResponse } from "../http.js";
-import { logger } from "./logger.js";
+import { logger } from "../logger.js";
 import { RequestScheduler } from "./scheduler.js";
 
 function captureLogs(

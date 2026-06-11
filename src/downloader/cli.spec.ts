@@ -6,8 +6,8 @@ import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 
 import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
+import { logger } from "../logger.js";
 import { runCli } from "./cli.js";
-import { logger } from "./logger.js";
 
 function headers(input: HttpRequest | string | URL): Headers {
   if (typeof input === "string" || input instanceof URL) {

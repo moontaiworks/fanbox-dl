@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FanboxApiError } from "../client.js";
+import { logger } from "../logger.js";
 import type { PostSummary } from "../types.js";
 import { discoverCreatorPosts } from "./discovery.js";
-import { logger } from "./logger.js";
 
 function captureLogs(entries: unknown[]): void {
   logger.configure({

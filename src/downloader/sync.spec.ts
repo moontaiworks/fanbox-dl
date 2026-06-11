@@ -7,9 +7,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { FanboxApiError } from "../client.js";
 import type { HttpRequest, HttpResponse } from "../http.js";
+import { logger } from "../logger.js";
 import type { ImagePost, PostSummary } from "../types.js";
 import { AssetDownloader } from "./asset.js";
-import { logger } from "./logger.js";
 import { RequestScheduler } from "./scheduler.js";
 import { syncCreator } from "./sync.js";
 

@@ -1,10 +1,10 @@
+import { logger } from "../logger.js";
 import type {
   ListCreatorPostsParams,
   PaginateCreatorPostsParams,
   PostSummary,
 } from "../types.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { logger } from "./logger.js";
 
 const DEFAULT_PAGE_SIZE = 300;
 

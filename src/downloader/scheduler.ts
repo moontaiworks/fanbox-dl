@@ -1,7 +1,7 @@
 import type { HttpResponse } from "../http.js";
+import type { Logger } from "../logger.js";
+import { logger } from "../logger.js";
 import { logDebugResponse } from "./errors.js";
-import type { Logger } from "./logger.js";
-import { logger } from "./logger.js";
 
 export interface RequestSchedulerOptions {
   concurrency: number;

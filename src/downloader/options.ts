@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import type { LogLevel } from "./logger.js";
+import type { LogLevel } from "../logger.js";
 
 export interface DownloadOptions {
   concurrency: number;
