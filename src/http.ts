@@ -149,10 +149,8 @@ function createResponse(options: {
   return {
     body: options.body,
     headers: options.headers,
-    json: async () => {
-      const parsed: unknown = JSON.parse(await readText(options.body));
-      return parsed;
-    },
+    json: async <T>(): Promise<T> =>
+      JSON.parse(await readText(options.body)) as T,
     ok: options.status >= 200 && options.status < 300,
     status: options.status,
     statusText: "",
