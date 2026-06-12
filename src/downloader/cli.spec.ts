@@ -1,11 +1,10 @@
 import { mkdtemp, readFile, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
+import type { HttpRequest, HttpTransport } from "../http.js";
 import { logger } from "../logger.js";
 import { runCli } from "./cli.js";
 
@@ -23,24 +22,6 @@ function requestUrl(input: HttpRequest | string | URL): string {
     : input instanceof URL
       ? input.href
       : input.url.toString();
-}
-
-function response(
-  body: unknown,
-  init: { status?: number; statusText?: string } = {},
-): HttpResponse {
-  const text = typeof body === "string" ? body : JSON.stringify(body);
-  const status = init.status ?? 200;
-
-  return {
-    body: Readable.from([text]),
-    headers: new Headers(),
-    json: () => Promise.resolve(JSON.parse(text) as unknown),
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: init.statusText ?? "",
-    text: () => Promise.resolve(text),
-  };
 }
 
 function summary() {
@@ -97,21 +78,25 @@ describe("runCli", () => {
       request: (input) => {
         const url = new URL(requestUrl(input));
         if (url.pathname.endsWith("/post.listCreator")) {
-          return Promise.resolve(response({ body: [summary()] }));
+          return Promise.resolve(
+            new Response(JSON.stringify({ body: [summary()] })),
+          );
         }
         if (url.pathname.endsWith("/post.info")) {
           return Promise.resolve(
-            response({
-              body: {
-                ...summary(),
-                body: { text: "Hello" },
-                coverImageUrl: null,
-                imageForShare: null,
-                nextPost: null,
-                prevPost: null,
-                type: "text",
-              },
-            }),
+            new Response(
+              JSON.stringify({
+                body: {
+                  ...summary(),
+                  body: { text: "Hello" },
+                  coverImageUrl: null,
+                  imageForShare: null,
+                  nextPost: null,
+                  prevPost: null,
+                  type: "text",
+                },
+              }),
+            ),
           );
         }
 
@@ -159,7 +144,9 @@ describe("runCli", () => {
       request: (input) => {
         const url = new URL(requestUrl(input));
         if (url.pathname.endsWith("/post.listCreator")) {
-          return Promise.resolve(response({ body: [summary()] }));
+          return Promise.resolve(
+            new Response(JSON.stringify({ body: [summary()] })),
+          );
         }
         if (url.pathname.endsWith("/post.info")) {
           postInfoCalls += 1;
@@ -197,10 +184,10 @@ describe("runCli", () => {
       close: () => Promise.resolve(),
       request: () =>
         Promise.resolve(
-          response(
-            { error: "nope" },
-            { status: 500, statusText: "Internal Server Error" },
-          ),
+          new Response(JSON.stringify({ error: "nope" }), {
+            status: 500,
+            statusText: "Internal Server Error",
+          }),
         ),
     };
 
@@ -230,7 +217,9 @@ describe("runCli", () => {
       close: () => Promise.resolve(),
       request: (input) => {
         userAgent = headers(input).get("User-Agent");
-        return Promise.resolve(response({ body: [summary()] }));
+        return Promise.resolve(
+          new Response(JSON.stringify({ body: [summary()] })),
+        );
       },
     };
 
@@ -253,38 +242,42 @@ describe("runCli", () => {
       request: (input) => {
         const url = new URL(requestUrl(input));
         if (url.pathname.endsWith("/post.listCreator")) {
-          return Promise.resolve(response({ body: [summary()] }));
+          return Promise.resolve(
+            new Response(JSON.stringify({ body: [summary()] })),
+          );
         }
         if (url.pathname.endsWith("/post.info")) {
           return Promise.resolve(
-            response({
-              body: {
-                ...summary(),
+            new Response(
+              JSON.stringify({
                 body: {
-                  images: [
-                    {
-                      extension: "png",
-                      height: 1,
-                      id: "image-id",
-                      originalUrl: "https://downloads.example.test/image.png",
-                      thumbnailUrl: "",
-                      width: 1,
-                    },
-                  ],
-                  text: "Hello",
+                  ...summary(),
+                  body: {
+                    images: [
+                      {
+                        extension: "png",
+                        height: 1,
+                        id: "image-id",
+                        originalUrl: "https://downloads.example.test/image.png",
+                        thumbnailUrl: "",
+                        width: 1,
+                      },
+                    ],
+                    text: "Hello",
+                  },
+                  coverImageUrl: null,
+                  imageForShare: null,
+                  nextPost: null,
+                  prevPost: null,
+                  type: "image",
                 },
-                coverImageUrl: null,
-                imageForShare: null,
-                nextPost: null,
-                prevPost: null,
-                type: "image",
-              },
-            }),
+              }),
+            ),
           );
         }
         if (url.hostname === "downloads.example.test") {
           assetHeaders = headers(input);
-          return Promise.resolve(response("asset"));
+          return Promise.resolve(new Response("asset"));
         }
 
         throw new Error(`Unexpected request: ${url.href}`);

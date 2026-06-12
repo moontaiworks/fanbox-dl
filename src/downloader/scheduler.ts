@@ -1,4 +1,3 @@
-import type { HttpResponse } from "../http.js";
 import type { Logger } from "../logger.js";
 import { logger } from "../logger.js";
 import { logDebugResponse } from "./errors.js";
@@ -41,9 +40,7 @@ export class RequestScheduler {
     this.#pausedUntil = Math.max(this.#pausedUntil, this.#now() + milliseconds);
   }
 
-  public async request(
-    operation: () => Promise<HttpResponse>,
-  ): Promise<HttpResponse> {
+  public async request(operation: () => Promise<Response>): Promise<Response> {
     let attempt = 0;
     for (;;) {
       try {
@@ -122,10 +119,7 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
-function parseRetryAfter(
-  response: HttpResponse,
-  now: number,
-): number | undefined {
+function parseRetryAfter(response: Response, now: number): number | undefined {
   const retryAfter = response.headers.get("Retry-After");
   if (!retryAfter) {
     return undefined;

@@ -1,8 +1,5 @@
-import { Readable } from "node:stream";
-
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { HttpResponse } from "../http.js";
 import { logger } from "../logger.js";
 import { RequestScheduler } from "./scheduler.js";
 
@@ -14,24 +11,6 @@ function captureLogs(
     level,
     write: (line) => entries.push(JSON.parse(line) as unknown),
   });
-}
-
-function response(
-  body: unknown,
-  init: { headers?: Headers | Record<string, string>; status?: number } = {},
-): HttpResponse {
-  const text = typeof body === "string" ? body : JSON.stringify(body);
-  const status = init.status ?? 200;
-
-  return {
-    body: Readable.from([text]),
-    headers: new Headers(init.headers),
-    json: () => Promise.resolve(JSON.parse(text) as unknown),
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: "",
-    text: () => Promise.resolve(text),
-  };
 }
 
 describe("RequestScheduler", () => {
@@ -78,11 +57,11 @@ describe("RequestScheduler", () => {
       attempts += 1;
       return Promise.resolve(
         attempts === 1
-          ? response("", {
+          ? new Response("", {
               headers: { "Retry-After": "2" },
               status: 429,
             })
-          : response("ok", { status: 200 }),
+          : new Response("ok", { status: 200 }),
       );
     });
 
@@ -103,7 +82,7 @@ describe("RequestScheduler", () => {
 
     const result = await scheduler.request(() => {
       attempts += 1;
-      return Promise.resolve(response("", { status: 404 }));
+      return Promise.resolve(new Response("", { status: 404 }));
     });
 
     expect(result.status).toBe(404);
@@ -123,8 +102,10 @@ describe("RequestScheduler", () => {
       attempts += 1;
       return Promise.resolve(
         attempts === 1
-          ? response({ error: "try again" }, { status: 500 })
-          : response("ok", { status: 200 }),
+          ? new Response(JSON.stringify({ error: "try again" }), {
+              status: 500,
+            })
+          : new Response("ok", { status: 200 }),
       );
     });
 

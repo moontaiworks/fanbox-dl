@@ -1,4 +1,3 @@
-import type { HttpResponse } from "../http.js";
 import type { LogFields, Logger } from "../logger.js";
 
 interface ResponseLikeError {
@@ -26,7 +25,7 @@ export function logDebugErrorResponse(
 
 export async function logDebugResponse(
   logger: Logger,
-  response: HttpResponse,
+  response: Response,
   fields: LogFields = {},
 ): Promise<void> {
   logger.debug("api.response.error", "HTTP error response", {
@@ -47,7 +46,7 @@ function isResponseLikeError(error: unknown): error is ResponseLikeError {
   );
 }
 
-async function readResponseBody(response: HttpResponse): Promise<unknown> {
+async function readResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   try {
     return JSON.parse(text) as unknown;

@@ -4,11 +4,7 @@ import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-import {
-  Http2Transport,
-  type HttpResponse,
-  type HttpTransport,
-} from "../http.js";
+import { Http2Transport, type HttpTransport } from "../http.js";
 import { assertPathBudget } from "./path.js";
 import type { RequestScheduler } from "./scheduler.js";
 
@@ -71,7 +67,7 @@ export class AssetDownloader {
       );
     }
     await pipeline(
-      response.body,
+      response.body ?? "",
       createWriteStream(temporaryPath, {
         flags: response.status === 206 && partialBytes > 0 ? "a" : "w",
       }),
@@ -97,7 +93,7 @@ export class AssetDownloadError extends Error {
   public readonly statusText: string;
   public readonly url: string;
 
-  public constructor(response: HttpResponse, url: string, body: unknown) {
+  public constructor(response: Response, url: string, body: unknown) {
     super(`Asset download failed: ${response.status} ${url}`);
     this.name = "AssetDownloadError";
     this.body = body;
@@ -116,7 +112,7 @@ async function hashFile(filePath: string): Promise<string> {
   return hash.digest("hex");
 }
 
-async function readResponseBody(response: HttpResponse): Promise<unknown> {
+async function readResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   try {
     return JSON.parse(text) as unknown;

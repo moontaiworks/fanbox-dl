@@ -1,5 +1,4 @@
 import { type ClientHttp2Session, connect } from "node:http2";
-import type { Readable } from "node:stream";
 
 const HTTP2_HEADER_AUTHORITY = ":authority";
 const HTTP2_HEADER_METHOD = ":method";
@@ -14,19 +13,9 @@ export interface HttpRequest {
   url: string | URL;
 }
 
-export interface HttpResponse {
-  body: Readable;
-  headers: Headers;
-  json(): Promise<unknown>;
-  ok: boolean;
-  status: number;
-  statusText: string;
-  text(): Promise<string>;
-}
-
 export interface HttpTransport {
   close(): Promise<void>;
-  request(request: HttpRequest | string | URL): Promise<HttpResponse>;
+  request(request: HttpRequest | string | URL): Promise<Response>;
 }
 
 type BodyInit = Blob | string | Uint8Array;
@@ -47,7 +36,7 @@ export class Http2Transport implements HttpTransport {
     await Promise.all(sessions.map(closeSession));
   }
 
-  public request(request: HttpRequest | string | URL): Promise<HttpResponse> {
+  public request(request: HttpRequest | string | URL): Promise<Response> {
     const normalized = normalizeRequest(request);
     const session = this.#getSession(normalized.url);
     const headers = createHttp2Headers(normalized);
@@ -58,12 +47,10 @@ export class Http2Transport implements HttpTransport {
       stream.once("error", reject);
       stream.once("response", (responseHeaders) => {
         settled = true;
-        const status = parseStatus(responseHeaders[HTTP2_HEADER_STATUS]);
         resolve(
-          createResponse({
-            body: stream,
+          new Response(stream, {
             headers: createResponseHeaders(responseHeaders),
-            status,
+            status: parseStatus(responseHeaders[HTTP2_HEADER_STATUS]),
           }),
         );
       });
@@ -141,23 +128,6 @@ function createHttp2Headers(
   return headers;
 }
 
-function createResponse(options: {
-  body: Readable;
-  headers: Headers;
-  status: number;
-}): HttpResponse {
-  return {
-    body: options.body,
-    headers: options.headers,
-    json: async <T>(): Promise<T> =>
-      JSON.parse(await readText(options.body)) as T,
-    ok: options.status >= 200 && options.status < 300,
-    status: options.status,
-    statusText: "",
-    text: async () => readText(options.body),
-  };
-}
-
 function createResponseHeaders(
   headers: NodeJS.Dict<string | string[]>,
 ): Headers {
@@ -218,29 +188,6 @@ function parseStatus(status: number | string | string[] | undefined): number {
   }
 
   return Number(status ?? 0);
-}
-
-async function readText(body: Readable): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of body) {
-    chunks.push(toBuffer(chunk));
-  }
-
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-function toBuffer(chunk: unknown): Buffer {
-  if (Buffer.isBuffer(chunk)) {
-    return chunk;
-  }
-  if (chunk instanceof Uint8Array) {
-    return Buffer.from(chunk);
-  }
-  if (typeof chunk === "string") {
-    return Buffer.from(chunk);
-  }
-
-  return Buffer.from(String(chunk));
 }
 
 async function writeRequestBody(

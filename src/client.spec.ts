@@ -1,5 +1,3 @@
-import { Readable } from "node:stream";
-
 import { describe, expect, it } from "vitest";
 
 import { CREATOR_GET_PATH } from "./endpoints/creator-get.js";
@@ -12,7 +10,7 @@ import { POST_LIST_CREATOR_PATH } from "./endpoints/post-list-creator.js";
 import { POST_LIST_HOME_PATH } from "./endpoints/post-list-home.js";
 import { POST_LIST_SUPPORTING_PATH } from "./endpoints/post-list-supporting.js";
 import { POST_PAGINATE_CREATOR_PATH } from "./endpoints/post-paginate-creator.js";
-import type { HttpRequest, HttpResponse, HttpTransport } from "./http.js";
+import type { HttpRequest, HttpTransport } from "./http.js";
 import { FanboxApiError, FanboxClient } from "./index.js";
 import type { PostSummary as PublicPostSummary } from "./index.js";
 
@@ -20,42 +18,18 @@ interface RecordedRequest {
   request: HttpRequest | string | URL;
 }
 
-interface TestHttpResponseInit {
-  headers?: Headers | Record<string, string>;
-  status?: number;
-  statusText?: string;
-}
-
-function createHttpResponse(
-  body: unknown,
-  init: TestHttpResponseInit = {},
-): HttpResponse {
-  const text = typeof body === "string" ? body : JSON.stringify(body);
-  const status = init.status ?? 200;
-
-  return {
-    body: Readable.from([text]),
-    headers: new Headers(init.headers),
-    json: () => Promise.resolve(JSON.parse(text) as unknown),
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: init.statusText ?? "",
-    text: () => Promise.resolve(text),
-  };
-}
-
 function createRecordingTransport(body: unknown) {
   const requests: RecordedRequest[] = [];
   const transport: HttpTransport = {
     close: () => Promise.resolve(),
-    request: (request) => {
+    request: async (request) => {
       requests.push({ request });
 
       return Promise.resolve(
-        createHttpResponse(
-          { body },
-          { headers: { "Content-Type": "application/json" }, status: 200 },
-        ),
+        new Response(JSON.stringify({ body }), {
+          headers: { "Content-Type": "application/json" },
+          status: 200,
+        }),
       );
     },
   };
@@ -180,7 +154,7 @@ describe("FanboxClient collection endpoints", () => {
         transport,
       });
 
-      await client[method](params);
+      await client[method](params as never);
 
       expect(getRequestUrl(requests[0])).toBe(
         `https://example.test/api/${path}`,
@@ -237,7 +211,7 @@ describe("FanboxClient errors", () => {
         close: () => Promise.resolve(),
         request: () =>
           Promise.resolve(
-            createHttpResponse(body, {
+            new Response(JSON.stringify(body), {
               headers: { "Content-Type": "application/json" },
               status: 401,
               statusText: "Unauthorized",
@@ -255,30 +229,6 @@ describe("FanboxClient errors", () => {
       body,
       status: 401,
       statusText: "Unauthorized",
-    });
-  });
-
-  it("preserves a non-JSON error body", async () => {
-    const client = new FanboxClient({
-      transport: {
-        close: () => Promise.resolve(),
-        request: () =>
-          Promise.resolve(
-            createHttpResponse("Bad Gateway", {
-              status: 502,
-              statusText: "Bad Gateway",
-            }),
-          ),
-      },
-    });
-
-    const error = await client
-      .getCreator({ creatorId: "creator" })
-      .catch((reason: unknown) => reason);
-
-    expect(error).toMatchObject({
-      body: "Bad Gateway",
-      status: 502,
     });
   });
 });

@@ -2,11 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import type { HttpRequest, HttpResponse, HttpTransport } from "../http.js";
+import type { HttpRequest, HttpTransport } from "../http.js";
 import { AssetDownloader } from "./asset.js";
 import { RequestScheduler } from "./scheduler.js";
 
@@ -16,27 +15,6 @@ function requestHeaders(request: HttpRequest | string | URL): Headers {
   }
 
   return new Headers(request.headers);
-}
-
-function response(
-  body: string,
-  init: {
-    headers?: Headers | Record<string, string>;
-    status?: number;
-    statusText?: string;
-  } = {},
-): HttpResponse {
-  const status = init.status ?? 200;
-
-  return {
-    body: Readable.from([body]),
-    headers: new Headers(init.headers),
-    json: () => Promise.resolve(JSON.parse(body) as unknown),
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: init.statusText ?? "",
-    text: () => Promise.resolve(body),
-  };
 }
 
 function sha256(value: string): string {
@@ -60,7 +38,7 @@ describe("AssetDownloader", () => {
       request: (request) => {
         range = requestHeaders(request).get("Range");
         return Promise.resolve(
-          response("def", {
+          new Response("def", {
             headers: { "Last-Modified": "Wed, 27 May 2026 12:17:41 GMT" },
             status: 206,
           }),
@@ -99,7 +77,7 @@ describe("AssetDownloader", () => {
         close: () => Promise.resolve(),
         request: (request) => {
           capturedHeaders = requestHeaders(request);
-          return Promise.resolve(response("def", { status: 206 }));
+          return Promise.resolve(new Response("def", { status: 206 }));
         },
       },
     });
@@ -124,7 +102,7 @@ describe("AssetDownloader", () => {
       scheduler: new RequestScheduler({ concurrency: 1 }),
       transport: {
         close: () => Promise.resolve(),
-        request: () => Promise.resolve(response("new", { status: 200 })),
+        request: () => Promise.resolve(new Response("new", { status: 200 })),
       },
     });
 
@@ -147,7 +125,7 @@ describe("AssetDownloader", () => {
       scheduler: new RequestScheduler({ concurrency: 1 }),
       transport: {
         close: () => Promise.resolve(),
-        request: () => Promise.resolve(response("data", { status: 200 })),
+        request: () => Promise.resolve(new Response("data", { status: 200 })),
       },
     });
 

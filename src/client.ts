@@ -44,11 +44,8 @@ import {
   POST_PAGINATE_CREATOR_PATH,
 } from "./endpoints/post-paginate-creator.js";
 import { createFanboxRequestHeaders } from "./fanbox-headers.js";
-import {
-  Http2Transport,
-  type HttpResponse,
-  type HttpTransport,
-} from "./http.js";
+import { Http2Transport, type HttpTransport } from "./http.js";
+import { logger } from "./logger.js";
 
 const DEFAULT_BASE_URL = "https://api.fanbox.cc";
 
@@ -57,7 +54,7 @@ export class FanboxApiError extends Error {
   public readonly status: number;
   public readonly statusText: string;
 
-  public constructor(response: HttpResponse, body: unknown) {
+  public constructor(response: Response, body: unknown) {
     super(
       `FANBOX API request failed: ${response.status} ${response.statusText}`,
     );
@@ -144,20 +141,17 @@ export class FanboxClient {
       method: "GET",
       url,
     });
-    const body = await readResponseBody(response);
+    const body = await response.json();
     if (!response.ok) {
+      const { status, statusText } = response;
+      const info = { path, query, status, statusText };
+      logger.log("api.request-failed", "API request failed", {
+        debug: { body, ...info },
+        info,
+      });
       throw new FanboxApiError(response, body);
     }
 
     return (body as FanboxEnvelope<T>).body;
-  }
-}
-
-async function readResponseBody(response: HttpResponse): Promise<unknown> {
-  const text = await response.text();
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
   }
 }

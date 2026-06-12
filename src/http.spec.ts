@@ -90,10 +90,9 @@ describe("Http2Transport", () => {
     const transport = new Http2Transport();
 
     const response = await transport.request(new URL("/asset.png", baseUrl));
-    const chunks: Buffer[] = [];
-    for await (const chunk of response.body) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
-    }
+    const chunks: Buffer[] = await response
+      .arrayBuffer()
+      .then((buffer) => [Buffer.from(buffer)]);
 
     expect(response.status).toBe(206);
     expect(response.headers.get("last-modified")).toBe(
