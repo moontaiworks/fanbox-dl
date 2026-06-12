@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import type { LogLevel } from "../logger.js";
+import { logger, type LogLevel } from "../logger.js";
+import { normalizeCookie } from "./cookie.js";
 
 export interface DownloadOptions {
   concurrency: number;
@@ -39,17 +40,14 @@ export function parseDownloadOptions(
 
   const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
-  if (creatorIds.length === 0 && !values.following && !values.supporting) {
+  if (creatorIds.length === 0 && !values.following && !values.supporting)
     throw new CliUsageError("at least one creator selector is required");
-  }
-  if (values["log-format"] !== "json" && values["log-format"] !== "pretty") {
+  if (values["log-format"] !== "json" && values["log-format"] !== "pretty")
     throw new CliUsageError("log-format must be json or pretty");
-  }
-  if (!isLogLevel(values["log-level"])) {
+  if (!isLogLevel(values["log-level"]))
     throw new CliUsageError(
       "log-level must be trace, debug, info, warn, error or silent",
     );
-  }
 
   const cookieFile = values["cookie-file"];
   const cookie = normalizeCookie(
@@ -86,33 +84,16 @@ export function parseDownloadOptions(
   };
 }
 
-function isFanboxCookieDomain(domain: string): boolean {
-  const normalized = domain.replace(/^\./, "").toLowerCase();
-  return normalized === "fanbox.cc" || normalized.endsWith(".fanbox.cc");
-}
-
 function isLogLevel(value: string): value is LogLevel {
   return ["debug", "error", "info", "silent", "trace", "warn"].includes(value);
 }
 
-function normalizeCookie(cookie?: string): string | undefined {
-  const value = cookie?.trim();
-  if (!value) {
-    return undefined;
-  }
-  const cookies = parseNetscapeCookies(value);
-  if (cookies.length > 0) {
-    return cookies.map(({ name, value }) => `${name}=${value}`).join("; ");
-  }
-
-  return value.includes("=") ? value : `FANBOXSESSID=${value}`;
-}
-
-function parseDownloadArgs(args: string[]) {
+function parseDownloadArgs([cmd, ...args]: string[]) {
+  logger.debug(`Parsing command "${cmd}" options from args: ${args.join(" ")}`);
   try {
     return parseArgs({
       allowPositionals: false,
-      args: args.slice(1),
+      args,
       options: {
         concurrency: { default: "3", type: "string" },
         cookie: { type: "string" },
@@ -137,29 +118,6 @@ function parseDownloadArgs(args: string[]) {
   } catch (error) {
     throw new CliUsageError((error as Error).message);
   }
-}
-
-function parseNetscapeCookies(value: string): {
-  name: string;
-  value: string;
-}[] {
-  const cookies: { name: string; value: string }[] = [];
-  for (const line of value.split(/\r?\n/)) {
-    if (!line || line.startsWith("#")) {
-      continue;
-    }
-    const columns = line.split("\t");
-    if (columns.length < 7) {
-      continue;
-    }
-    const [domain, , , , , name, cookieValue] = columns;
-    if (!isFanboxCookieDomain(domain)) {
-      continue;
-    }
-    cookies.push({ name, value: cookieValue });
-  }
-
-  return cookies;
 }
 
 function parseNonNegativeInteger(name: string, value: string): number {
