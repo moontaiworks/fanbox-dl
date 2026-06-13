@@ -44,8 +44,8 @@ import {
   POST_PAGINATE_CREATOR_PATH,
 } from "./endpoints/post-paginate-creator.js";
 import { createFanboxRequestHeaders } from "./fanbox-headers.js";
-import { Http2Transport, type HttpTransport } from "./http.js";
 import { logger } from "./logger.js";
+import { Http2Transport, type HttpTransport } from "./transport/http2.js";
 
 const DEFAULT_BASE_URL = "https://api.fanbox.cc";
 
@@ -136,11 +136,8 @@ export class FanboxClient {
       }
     }
 
-    const response = await this.#transport.request({
-      headers: this.#headers,
-      method: "GET",
-      url,
-    });
+    const request = new Request(url, { headers: this.#headers });
+    const response = await this.#transport.fetch(request);
     const body = await response.json();
     if (!response.ok) {
       const { status, statusText } = response;

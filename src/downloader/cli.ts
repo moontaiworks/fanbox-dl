@@ -1,7 +1,7 @@
 import { FanboxClient } from "../client.js";
 import { createFanboxRequestHeaders } from "../fanbox-headers.js";
-import { Http2Transport, type HttpTransport } from "../http.js";
 import { logger } from "../logger.js";
+import { Http2Transport, type HttpTransport } from "../transport/http2.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
@@ -60,14 +60,12 @@ export async function runCli(
     return 0;
   }
 
-  let transportToClose: HttpTransport | undefined;
   try {
     const { logFormat, logLevel, ...options } = parseDownloadOptions(args, env);
     logger.configure({ format: logFormat, level: logLevel });
     assertPathBudget(options.output);
 
     const transport = dependencies.transport ?? new Http2Transport();
-    transportToClose = dependencies.transport ? undefined : transport;
     const requestHeaders = createFanboxRequestHeaders({
       cookie: options.cookie,
       userAgent: options.userAgent,
@@ -81,9 +79,7 @@ export async function runCli(
     const client = new FanboxClient({
       cookie: requestHeaders.Cookie,
       transport: {
-        close: () => transport.close(),
-        request: (request) =>
-          scheduler.request(() => transport.request(request)),
+        fetch: (request) => scheduler.request(() => transport.fetch(request)),
       },
       userAgent: requestHeaders["User-Agent"],
     });
@@ -155,8 +151,6 @@ export async function runCli(
       }),
     );
     return 1;
-  } finally {
-    await transportToClose?.close();
   }
 }
 

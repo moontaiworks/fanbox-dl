@@ -1,4 +1,4 @@
-import type { HttpTransport } from "./http.js";
+import type { HttpTransport } from "./transport/http2.js";
 
 export interface FanboxClientOptions {
   baseUrl?: string;

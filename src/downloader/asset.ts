@@ -4,7 +4,7 @@ import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-import { Http2Transport, type HttpTransport } from "../http.js";
+import { Http2Transport, type HttpTransport } from "../transport/http2.js";
 import { assertPathBudget } from "./path.js";
 import type { RequestScheduler } from "./scheduler.js";
 
@@ -53,11 +53,7 @@ export class AssetDownloader {
     }
 
     const response = await this.#scheduler.request(() =>
-      this.#transport.request({
-        headers,
-        method: "GET",
-        url: options.url,
-      }),
+      this.#transport.fetch(new Request(options.url, { headers })),
     );
     if (!response.ok) {
       throw new AssetDownloadError(
