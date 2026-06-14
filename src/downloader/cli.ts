@@ -5,7 +5,12 @@ import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
 import { logDebugErrorResponse } from "./errors.js";
-import { CliUsageError, parseDownloadOptions } from "./options.js";
+import type { DownloadOptions } from "./options.js";
+import {
+  CliUsageError,
+  DOWNLOAD_HELP,
+  parseDownloadOptions,
+} from "./options.js";
 import { resolveCreatorIds } from "./resolver.js";
 import { syncCreator } from "./sync.js";
 
@@ -13,87 +18,49 @@ export interface RunCliDependencies {
   transport?: HttpTransport;
 }
 
-export const DOWNLOAD_HELP = `Usage: fanbox-dl download [options]
+class Downloader {
+  #assetDownloader: AssetDownloader;
+  #client: FanboxClient;
+  #requestWorker: RequestWorker;
 
-Download FANBOX posts for selected creators.
-
-Selectors:
-  --creator <id>            Add a creator ID. Can be repeated.
-  --following               Add all followed creators.
-  --supporting              Add all supporting creators.
-  --ignore-creator <id>     Exclude a creator ID. Can be repeated.
-
-Auth:
-  --cookie <value>          Raw session ID or FANBOXSESSID=... cookie.
-  --cookie-file <path>      Read raw cookie or Netscape cookies.txt.
-  --user-agent <value>      Send the User-Agent from your logged-in browser.
-  FANBOX_SESSION_ID         Environment fallback.
-  FANBOX_USER_AGENT         User-Agent environment fallback.
-
-Download:
-  --output <path>           Output directory. Default: fanbox-downloads.
-  --flat-posts              Store post files directly under each creator.
-  --verify-assets           Verify existing asset size and SHA-256 locally.
-
-Requests:
-  --concurrency <n>         Concurrent requests. Default: 5.
-  --request-interval-ms <n> Delay between request starts. Default: 500.
-  --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
-  --max-retries <n>         Retry attempts. Default: 3.
-
-Output:
-  --log-format json|pretty  Default: json.
-  --log-level <level>       debug|info|warn|error. Default: info.
-  --help                    Show this help.
-`;
-
-export async function runCli(
-  args: string[],
-  env: NodeJS.ProcessEnv = process.env,
-  dependencies: RunCliDependencies = {},
-): Promise<number> {
-  if (args.includes("--help") || args.includes("-h")) {
-    logger.raw(DOWNLOAD_HELP);
-    return 0;
-  }
-
-  try {
-    const { logFormat, logLevel, ...options } = parseDownloadOptions(args, env);
-    logger.configure({ format: logFormat, level: logLevel });
-
+  constructor(
+    private options: DownloadOptions,
+    dependencies: RunCliDependencies,
+  ) {
     const requestHeaders = createFanboxRequestHeaders({
       cookie: options.cookie,
       userAgent: options.userAgent,
     });
-    const worker = new RequestWorker({
+    this.#requestWorker = new RequestWorker({
       concurrency: options.concurrency,
       intervalMs: options.requestIntervalMs,
       maxRetries: options.maxRetries,
       rateLimitPauseMs: options.rateLimitPauseMs,
       transport: dependencies.transport,
     });
-    const client = new FanboxClient({
-      cookie: requestHeaders.Cookie,
-      transport: worker,
-      userAgent: requestHeaders["User-Agent"],
-    });
-    const creatorIds = await resolveCreatorIds(client, options);
-
-    const assetDownloader = new AssetDownloader({
+    this.#client = new FanboxClient({
       headers: requestHeaders,
-      worker,
+      transport: this.#requestWorker,
     });
+    this.#assetDownloader = new AssetDownloader({
+      headers: requestHeaders,
+      transport: this.#requestWorker,
+    });
+  }
+
+  async start() {
     let failed = false;
+    const creatorIds = await resolveCreatorIds(this.#client, this.options);
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", undefined, { creatorId });
       try {
         const manifest = await syncCreator({
-          assetDownloader,
-          client,
+          assetDownloader: this.#assetDownloader,
+          client: this.#client,
           creatorId,
-          flatPosts: options.flatPosts,
-          outputDirectory: options.output,
-          verifyAssets: options.verifyAssets,
+          flatPosts: this.options.flatPosts,
+          outputDirectory: this.options.output,
+          verifyAssets: this.options.verifyAssets,
         });
         failed ||= hasFailures(manifest);
         logger.info("creator.sync.complete", undefined, { creatorId });
@@ -106,6 +73,26 @@ export async function runCli(
         });
       }
     }
+    return failed;
+  }
+}
+
+export async function runCli(
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+  dependencies: RunCliDependencies = {},
+): Promise<number> {
+  if (args.includes("--help") || args.includes("-h")) {
+    logger.raw(DOWNLOAD_HELP);
+    return 0;
+  }
+
+  try {
+    const options = parseDownloadOptions(args, env);
+    logger.configure({ format: options.logFormat, level: options.logLevel });
+
+    const downloader = new Downloader(options, dependencies);
+    const failed = await downloader.start();
 
     return failed ? 1 : 0;
   } catch (error) {

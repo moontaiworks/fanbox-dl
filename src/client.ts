@@ -1,4 +1,3 @@
-import type { FanboxClientOptions } from "./client-options.js";
 import {
   CREATOR_GET_PATH,
   type GetCreatorParams,
@@ -43,11 +42,16 @@ import {
   type PaginateCreatorPostsResult,
   POST_PAGINATE_CREATOR_PATH,
 } from "./endpoints/post-paginate-creator.js";
-import { createFanboxRequestHeaders } from "./fanbox-headers.js";
 import { logger } from "./logger.js";
 import { Http2Transport, type HttpTransport } from "./transport/http2.js";
 
 const DEFAULT_BASE_URL = "https://api.fanbox.cc";
+
+export interface FanboxClientOptions {
+  baseUrl?: string;
+  headers?: Record<string, string>;
+  transport?: HttpTransport;
+}
 
 export class FanboxApiError extends Error {
   public readonly body: unknown;
@@ -72,10 +76,7 @@ export class FanboxClient {
 
   public constructor(options: FanboxClientOptions = {}) {
     this.#baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
-    this.#headers = createFanboxRequestHeaders({
-      cookie: options.cookie,
-      userAgent: options.userAgent,
-    });
+    this.#headers = options.headers ?? {};
     this.#transport = options.transport ?? new Http2Transport();
   }
 
@@ -142,7 +143,7 @@ export class FanboxClient {
     if (!response.ok) {
       const { status, statusText } = response;
       const info = { path, query, status, statusText };
-      logger.log("api.request-failed", "API request failed", {
+      logger.log("client.failed", undefined, {
         debug: { body, ...info },
         info,
       });

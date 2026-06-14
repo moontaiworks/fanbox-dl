@@ -4,6 +4,40 @@ import { parseArgs } from "node:util";
 import { logger, type LogLevel } from "../logger.js";
 import { normalizeCookie } from "./cookie.js";
 
+export const DOWNLOAD_HELP = `Usage: fanbox-dl download [options]
+
+Download FANBOX posts for selected creators.
+
+Selectors:
+  --creator <id>            Add a creator ID. Can be repeated.
+  --following               Add all followed creators.
+  --supporting              Add all supporting creators.
+  --ignore-creator <id>     Exclude a creator ID. Can be repeated.
+
+Auth:
+  --cookie <value>          Raw session ID or FANBOXSESSID=... cookie.
+  --cookie-file <path>      Read raw cookie or Netscape cookies.txt.
+  --user-agent <value>      Send the User-Agent from your logged-in browser.
+  FANBOX_SESSION_ID         Environment fallback.
+  FANBOX_USER_AGENT         User-Agent environment fallback.
+
+Download:
+  --output <path>           Output directory. Default: fanbox-downloads.
+  --flat-posts              Store post files directly under each creator.
+  --verify-assets           Verify existing asset size and SHA-256 locally.
+
+Requests:
+  --concurrency <n>         Concurrent requests. Default: 5.
+  --request-interval-ms <n> Delay between request starts. Default: 500.
+  --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
+  --max-retries <n>         Retry attempts. Default: 3.
+
+Output:
+  --log-format json|pretty  Default: json.
+  --log-level <level>       trace|debug|info|warn|error|silent. Default: info.
+  --help                    Show this help.
+`;
+
 export interface DownloadOptions {
   concurrency: number;
   cookie?: string;
@@ -33,10 +67,6 @@ export function parseDownloadOptions(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): DownloadOptions {
-  if (args[0] !== "download") {
-    throw new CliUsageError(`unknown command: ${args[0]}`);
-  }
-
   const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting)
@@ -88,8 +118,8 @@ function isLogLevel(value: string): value is LogLevel {
   return ["debug", "error", "info", "silent", "trace", "warn"].includes(value);
 }
 
-function parseDownloadArgs([cmd, ...args]: string[]) {
-  logger.debug(`Parsing command "${cmd}" options from args: ${args.join(" ")}`);
+function parseDownloadArgs(args: string[]) {
+  logger.debug(`Parsing command options from args: ${args.join(" ")}`);
   try {
     return parseArgs({
       allowPositionals: false,

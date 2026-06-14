@@ -7,12 +7,8 @@ export function createFanboxRequestHeaders(
   options: FanboxRequestHeadersOptions = {},
 ): Record<string, string> {
   const headers: Record<string, string> = {
-    Accept: "application/json, text/plain, */*",
     Origin: "https://www.fanbox.cc",
     Referer: "https://www.fanbox.cc/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
     "User-Agent": options.userAgent ?? createRandomUserAgent(),
   };
   if (options.cookie !== undefined) {
