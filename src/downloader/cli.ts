@@ -4,10 +4,8 @@ import { logger } from "../logger.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
-import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
-import { assertPathBudget } from "./path.js";
 import { resolveCreatorIds } from "./resolver.js";
 import { syncCreator } from "./sync.js";
 
@@ -34,7 +32,6 @@ Auth:
 
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
-  --dry-run                 List creators/posts without downloading or writing.
   --flat-posts              Store post files directly under each creator.
   --verify-assets           Verify existing asset size and SHA-256 locally.
 
@@ -63,7 +60,6 @@ export async function runCli(
   try {
     const { logFormat, logLevel, ...options } = parseDownloadOptions(args, env);
     logger.configure({ format: logFormat, level: logLevel });
-    assertPathBudget(options.output);
 
     const requestHeaders = createFanboxRequestHeaders({
       cookie: options.cookie,
@@ -82,24 +78,6 @@ export async function runCli(
       userAgent: requestHeaders["User-Agent"],
     });
     const creatorIds = await resolveCreatorIds(client, options);
-    if (options.dryRun) {
-      for (const creatorId of creatorIds) {
-        logger.info("dry-run.creator", "Dry-run creator selected", {
-          creatorId,
-        });
-        for (const post of await discoverCreatorPosts(client, creatorId)) {
-          logger.info("dry-run.post", "Dry-run post discovered", {
-            creatorId,
-            postId: post.id,
-            restricted: post.isRestricted,
-            title: post.title,
-            updatedDatetime: post.updatedDatetime,
-          });
-        }
-      }
-
-      return 0;
-    }
 
     const assetDownloader = new AssetDownloader({
       headers: requestHeaders,

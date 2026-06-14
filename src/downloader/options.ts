@@ -8,7 +8,6 @@ export interface DownloadOptions {
   concurrency: number;
   cookie?: string;
   creatorIds: string[];
-  dryRun: boolean;
   flatPosts: boolean;
   following: boolean;
   ignoreCreatorIds: string[];
@@ -62,7 +61,6 @@ export function parseDownloadOptions(
     concurrency: parsePositiveInteger("concurrency", values.concurrency),
     cookie,
     creatorIds,
-    dryRun: values["dry-run"],
     flatPosts: values["flat-posts"],
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
