@@ -4,12 +4,12 @@ import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-import type { RequestWorker } from "../transport/worker.js";
+import type { HttpTransport } from "../transport/http2.js";
 import { assertPathBudget } from "./path.js";
 
 export interface AssetDownloaderOptions {
   headers?: Record<string, string>;
-  worker: RequestWorker;
+  transport: HttpTransport;
 }
 
 export interface AssetDownloadOptions {
@@ -26,11 +26,11 @@ export interface AssetDownloadResult {
 
 export class AssetDownloader {
   readonly #headers: Record<string, string>;
-  readonly #worker: RequestWorker;
+  readonly #transport: HttpTransport;
 
   public constructor(options: AssetDownloaderOptions) {
     this.#headers = options.headers ?? {};
-    this.#worker = options.worker;
+    this.#transport = options.transport;
   }
 
   public async download(
@@ -48,7 +48,7 @@ export class AssetDownloader {
       headers.Range = `bytes=${partialBytes}-`;
     }
 
-    const response = await this.#worker.fetch(
+    const response = await this.#transport.fetch(
       new Request(options.url, { headers }),
     );
     if (!response.ok) {
