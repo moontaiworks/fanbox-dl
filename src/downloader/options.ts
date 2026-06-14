@@ -16,7 +16,7 @@ export interface DownloadOptions {
   logLevel: LogLevel;
   maxRetries: number;
   output: string;
-  rateLimitPauseMs: number;
+  rateLimitPauseMs?: number;
   requestIntervalMs: number;
   supporting: boolean;
   userAgent?: string;
@@ -70,10 +70,12 @@ export function parseDownloadOptions(
     logLevel: values["log-level"],
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
-    rateLimitPauseMs: parseNonNegativeInteger(
-      "rate-limit-pause-ms",
-      values["rate-limit-pause-ms"],
-    ),
+    rateLimitPauseMs: values["rate-limit-pause-ms"]
+      ? parseNonNegativeInteger(
+          "rate-limit-pause-ms",
+          values["rate-limit-pause-ms"],
+        )
+      : undefined,
     requestIntervalMs: parseNonNegativeInteger(
       "request-interval-ms",
       values["request-interval-ms"],
@@ -95,7 +97,7 @@ function parseDownloadArgs([cmd, ...args]: string[]) {
       allowPositionals: false,
       args,
       options: {
-        concurrency: { default: "3", type: "string" },
+        concurrency: { default: "5", type: "string" },
         cookie: { type: "string" },
         "cookie-file": { type: "string" },
         creator: { multiple: true, type: "string" },
@@ -105,9 +107,9 @@ function parseDownloadArgs([cmd, ...args]: string[]) {
         "ignore-creator": { multiple: true, type: "string" },
         "log-format": { default: "json", type: "string" },
         "log-level": { default: "info", type: "string" },
-        "max-retries": { default: "5", type: "string" },
+        "max-retries": { default: "3", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
-        "rate-limit-pause-ms": { default: "60000", type: "string" },
+        "rate-limit-pause-ms": { type: "string" },
         "request-interval-ms": { default: "500", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },

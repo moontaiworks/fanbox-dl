@@ -1,14 +1,14 @@
 import { FanboxClient } from "../client.js";
 import { createFanboxRequestHeaders } from "../fanbox-headers.js";
 import { logger } from "../logger.js";
-import { Http2Transport, type HttpTransport } from "../transport/http2.js";
+import type { HttpTransport } from "../transport/http2.js";
+import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
 import { discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
 import { CliUsageError, parseDownloadOptions } from "./options.js";
 import { assertPathBudget } from "./path.js";
 import { resolveCreatorIds } from "./resolver.js";
-import { RequestScheduler } from "./scheduler.js";
 import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
@@ -39,10 +39,10 @@ Download:
   --verify-assets           Verify existing asset size and SHA-256 locally.
 
 Requests:
-  --concurrency <n>         Concurrent requests. Default: 3.
+  --concurrency <n>         Concurrent requests. Default: 5.
   --request-interval-ms <n> Delay between request starts. Default: 500.
-  --rate-limit-pause-ms <n> Pause after 429 without Retry-After. Default: 60000.
-  --max-retries <n>         Retry attempts. Default: 5.
+  --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
+  --max-retries <n>         Retry attempts. Default: 3.
 
 Output:
   --log-format json|pretty  Default: json.
@@ -65,21 +65,21 @@ export async function runCli(
     logger.configure({ format: logFormat, level: logLevel });
     assertPathBudget(options.output);
 
-    const transport = dependencies.transport ?? new Http2Transport();
     const requestHeaders = createFanboxRequestHeaders({
       cookie: options.cookie,
       userAgent: options.userAgent,
     });
-    const scheduler = new RequestScheduler({
+    const worker = new RequestWorker({
       concurrency: options.concurrency,
+      intervalMs: options.requestIntervalMs,
       maxRetries: options.maxRetries,
       rateLimitPauseMs: options.rateLimitPauseMs,
-      requestIntervalMs: options.requestIntervalMs,
+      transport: dependencies.transport,
     });
     const client = new FanboxClient({
       cookie: requestHeaders.Cookie,
       transport: {
-        fetch: (request) => scheduler.request(() => transport.fetch(request)),
+        fetch: (request) => worker.execute(request),
       },
       userAgent: requestHeaders["User-Agent"],
     });
@@ -105,8 +105,7 @@ export async function runCli(
 
     const assetDownloader = new AssetDownloader({
       headers: requestHeaders,
-      scheduler,
-      transport,
+      worker,
     });
     let failed = false;
     for (const creatorId of creatorIds) {

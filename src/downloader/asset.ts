@@ -4,14 +4,12 @@ import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
-import { Http2Transport, type HttpTransport } from "../transport/http2.js";
+import type { RequestWorker } from "../transport/worker.js";
 import { assertPathBudget } from "./path.js";
-import type { RequestScheduler } from "./scheduler.js";
 
 export interface AssetDownloaderOptions {
   headers?: Record<string, string>;
-  scheduler: RequestScheduler;
-  transport?: HttpTransport;
+  worker: RequestWorker;
 }
 
 export interface AssetDownloadOptions {
@@ -28,13 +26,11 @@ export interface AssetDownloadResult {
 
 export class AssetDownloader {
   readonly #headers: Record<string, string>;
-  readonly #scheduler: RequestScheduler;
-  readonly #transport: HttpTransport;
+  readonly #worker: RequestWorker;
 
   public constructor(options: AssetDownloaderOptions) {
     this.#headers = options.headers ?? {};
-    this.#scheduler = options.scheduler;
-    this.#transport = options.transport ?? new Http2Transport();
+    this.#worker = options.worker;
   }
 
   public async download(
@@ -52,8 +48,8 @@ export class AssetDownloader {
       headers.Range = `bytes=${partialBytes}-`;
     }
 
-    const response = await this.#scheduler.request(() =>
-      this.#transport.fetch(new Request(options.url, { headers })),
+    const response = await this.#worker.execute(
+      new Request(options.url, { headers }),
     );
     if (!response.ok) {
       throw new AssetDownloadError(
