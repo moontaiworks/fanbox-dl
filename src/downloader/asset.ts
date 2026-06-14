@@ -48,7 +48,7 @@ export class AssetDownloader {
       headers.Range = `bytes=${partialBytes}-`;
     }
 
-    const response = await this.#worker.execute(
+    const response = await this.#worker.fetch(
       new Request(options.url, { headers }),
     );
     if (!response.ok) {

@@ -86,15 +86,15 @@ export class RequestWorker {
     this.#rateLimitPauseMs = rateLimitPauseMs;
   }
 
-  async execute(request: Request | string | URL) {
+  async fetch(request: Request | string | URL) {
     await this.#concurrencyLimiter.acquire();
 
-    return this.#execute(request).finally(() => {
+    return this.#fetch(request).finally(() => {
       this.#concurrencyLimiter.release();
     });
   }
 
-  async #execute(
+  async #fetch(
     request: Request | string | URL,
     retryRemains = this.#maxRetries,
   ): Promise<Response> {
@@ -126,7 +126,7 @@ export class RequestWorker {
       return response;
     }
 
-    return this.#execute(request, retryRemains - 1);
+    return this.#fetch(request, retryRemains - 1);
   }
 }
 

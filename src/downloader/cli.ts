@@ -78,9 +78,7 @@ export async function runCli(
     });
     const client = new FanboxClient({
       cookie: requestHeaders.Cookie,
-      transport: {
-        fetch: (request) => worker.execute(request),
-      },
+      transport: worker,
       userAgent: requestHeaders["User-Agent"],
     });
     const creatorIds = await resolveCreatorIds(client, options);
