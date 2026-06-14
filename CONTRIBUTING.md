@@ -250,7 +250,7 @@ Coverage reports are automatically generated and uploaded to [Codecov](https://c
 
 Releases are automated through semantic-release:
 
-1. Commits to the `main` branch trigger the release workflow
+1. Commits to the `release` branch trigger the release workflow
 2. Semantic-release analyzes commit messages
 3. Version is bumped according to commit types
 4. Changelog is generated automatically
@@ -276,7 +276,7 @@ Tested on Node.js versions: 20.x, 22.x, 24.x
 
 ### Continuous Deployment
 
-The Release workflow runs on pushes to the `main` branch:
+The Release workflow runs on pushes to the `release` branch:
 
 1. Analyzes commits using conventional commit format
 2. Determines version bump based on commit types
