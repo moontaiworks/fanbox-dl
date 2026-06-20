@@ -4,7 +4,8 @@ import { logger } from "../logger.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
-import { logDebugErrorResponse } from "./errors.js";
+import type { CreatorManifest } from "./manifest/creator-item.js";
+import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { DownloadOptions } from "./options.js";
 import {
   CliUsageError,
@@ -51,28 +52,29 @@ class Downloader {
   async start() {
     let failed = false;
     const creatorIds = await resolveCreatorIds(this.#client, this.options);
+    const creatorManifestManager = new CreatorManifestManager({
+      rootPath: this.options.output,
+    });
+
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", undefined, { creatorId });
-      try {
-        const manifest = await syncCreator({
-          assetDownloader: this.#assetDownloader,
-          client: this.#client,
-          creatorId,
-          flatPosts: this.options.flatPosts,
-          outputDirectory: this.options.output,
-          verifyAssets: this.options.verifyAssets,
-        });
-        failed ||= hasFailures(manifest);
-        logger.info("creator.sync.complete", undefined, { creatorId });
-      } catch (error) {
-        failed = true;
-        logDebugErrorResponse(logger, error);
-        logger.error("creator.sync.failed", undefined, {
-          creatorId,
-          error: String(error),
-        });
-      }
+      const creatorManifest = await creatorManifestManager.load(creatorId);
+
+      await syncCreator({
+        assetDownloader: this.#assetDownloader,
+        client: this.#client,
+        creatorId,
+        flatPosts: this.options.flatPosts,
+        manifest: creatorManifest,
+        outputDirectory: this.options.output,
+        verifyAssets: this.options.verifyAssets,
+      });
+      const success = !hasFailures(creatorManifest);
+      failed ||= !success;
+      logger.info("creator.sync.complete", undefined, { creatorId, success });
+      await creatorManifest.save();
     }
+
     return failed;
   }
 }
@@ -103,7 +105,6 @@ export async function runCli(
       return 2;
     }
 
-    logDebugErrorResponse(logger, error);
     logger.raw(
       JSON.stringify({
         event: "cli.failed",
@@ -116,9 +117,7 @@ export async function runCli(
   }
 }
 
-function hasFailures(
-  manifest: Awaited<ReturnType<typeof syncCreator>>,
-): boolean {
+function hasFailures(manifest: CreatorManifest): boolean {
   return Object.values(manifest.posts).some(
     (post) => post?.status === "failed",
   );

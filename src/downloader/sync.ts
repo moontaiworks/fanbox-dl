@@ -20,12 +20,11 @@ import type {
 import type { AssetDownloader } from "./asset.js";
 import { type CreatorPostClient, discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";
-import {
-  type AssetManifestEntry,
-  type CreatorManifest,
-  ManifestStore,
-  type PostManifestEntry,
-} from "./manifest.js";
+import type {
+  AssetManifestData,
+  CreatorManifest,
+  PostManifestData,
+} from "./manifest/creator-item.js";
 import { renderPostMarkdown } from "./markdown.js";
 import {
   assertPathBudget,
@@ -44,6 +43,7 @@ export interface SyncCreatorOptions {
   client: SyncClient;
   creatorId: string;
   flatPosts?: boolean;
+  manifest: CreatorManifest;
   outputDirectory: string;
   verifyAssets?: boolean;
 }
@@ -61,24 +61,18 @@ interface PostLayout {
   postName: string;
 }
 
-export async function syncCreator(
-  options: SyncCreatorOptions,
-): Promise<CreatorManifest> {
-  const store = new ManifestStore(options.outputDirectory, options.creatorId);
-  const manifest = await store.load();
+export async function syncCreator(options: SyncCreatorOptions): Promise<void> {
   for (const summary of await discoverCreatorPosts(
     options.client,
     options.creatorId,
   )) {
-    await syncPost(options, manifest, summary, store);
+    await syncPost(options, summary);
   }
-
-  return manifest;
 }
 
 async function archiveObsoleteAssets(
   creatorDirectory: string,
-  postEntry: PostManifestEntry,
+  postEntry: PostManifestData,
   assets: AssetDescriptor[],
 ): Promise<void> {
   const currentKeys = new Set(assets.map((asset) => asset.key));
@@ -256,7 +250,7 @@ function markdownAssetPath(contentPath: string, assetPath: string): string {
 
 async function moveExistingAsset(
   creatorDirectory: string,
-  existing: AssetManifestEntry,
+  existing: AssetManifestData,
   manifestPath: string,
 ): Promise<boolean> {
   if (existing.path === manifestPath) {
@@ -279,10 +273,8 @@ async function moveExistingAsset(
 }
 
 async function syncPost(
-  options: SyncCreatorOptions,
-  manifest: CreatorManifest,
+  { manifest, ...options }: SyncCreatorOptions,
   summary: PostSummary,
-  store: ManifestStore,
 ): Promise<void> {
   const creatorDirectory = path.join(
     options.outputDirectory,
@@ -331,7 +323,7 @@ async function syncPost(
       summary,
       summary.publishedDatetime,
     );
-    await store.save(manifest);
+    await manifest.save();
     return;
   }
   const coverChanged = entry.assets.cover?.url !== summary.cover?.url;
@@ -380,7 +372,7 @@ async function syncPost(
           ) {
             return undefined;
           }
-          const assetEntry: AssetManifestEntry = {
+          const assetEntry: AssetManifestData = {
             path: manifestPath,
             status: "downloading",
             url: asset.url,
@@ -390,7 +382,7 @@ async function syncPost(
         }),
       )
     ).filter((download) => download !== undefined);
-    await store.save(manifest);
+    await manifest.save();
     await Promise.all(
       downloads.map(async ({ asset, assetEntry, manifestPath }) => {
         try {
@@ -462,12 +454,12 @@ async function syncPost(
       postId: summary.id,
     });
   }
-  await store.save(manifest);
+  await manifest.save();
 }
 
 async function verifyAssets(
   creatorDirectory: string,
-  entry: PostManifestEntry,
+  entry: PostManifestData,
 ): Promise<boolean> {
   for (const asset of Object.values(entry.assets)) {
     if (!asset) {
