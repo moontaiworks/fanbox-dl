@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 
-import { runCli } from "./downloader/cli.js";
+import * as Downloader from "./downloader/cli.js";
 import { logger } from "./logger.js";
+import { CliUsageError } from "./usage.js";
 
-const commands: Partial<Record<string, (args: string[]) => Promise<number>>> = {
-  download: runCli,
+interface Command {
+  exec(args: string[]): Promise<number>;
+  help(): void;
+}
+
+const commands: Partial<Record<string, Command>> = {
+  download: Downloader,
 };
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -20,6 +26,32 @@ if (!command) {
   process.exit(1);
 }
 
-void command(args).then((exitCode) => {
-  process.exitCode = exitCode;
-});
+if (args.includes("--help") || args.includes("-h")) {
+  command.help();
+  process.exit(0);
+}
+
+void command
+  .exec(args)
+  .then((exitCode) => {
+    process.exitCode = exitCode;
+  })
+  .catch((error: unknown) => {
+    const isMisUsage = error instanceof CliUsageError;
+    const message = String(error);
+    if (isMisUsage) {
+      command.help();
+      process.exit(2);
+    }
+
+    logger.raw(
+      JSON.stringify({
+        event: "cli.failed",
+        level: "error",
+        msg: message,
+        time: new Date().toISOString(),
+      }),
+    );
+
+    throw error;
+  });

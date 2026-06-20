@@ -7,11 +7,7 @@ import { AssetDownloader } from "./asset.js";
 import type { CreatorManifest } from "./manifest/creator-item.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { DownloadOptions } from "./options.js";
-import {
-  CliUsageError,
-  DOWNLOAD_HELP,
-  parseDownloadOptions,
-} from "./options.js";
+import { DOWNLOAD_HELP, parseDownloadOptions } from "./options.js";
 import { resolveCreatorIds } from "./resolver.js";
 import { syncCreator } from "./sync.js";
 
@@ -50,11 +46,10 @@ class Downloader {
   }
 
   async start() {
+    const { output: rootPath } = this.options;
     let failed = false;
     const creatorIds = await resolveCreatorIds(this.#client, this.options);
-    const creatorManifestManager = new CreatorManifestManager({
-      rootPath: this.options.output,
-    });
+    const creatorManifestManager = new CreatorManifestManager({ rootPath });
 
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", undefined, { creatorId });
@@ -66,7 +61,7 @@ class Downloader {
         creatorId,
         flatPosts: this.options.flatPosts,
         manifest: creatorManifest,
-        outputDirectory: this.options.output,
+        outputDirectory: rootPath,
         verifyAssets: this.options.verifyAssets,
       });
       const success = !hasFailures(creatorManifest);
@@ -79,42 +74,22 @@ class Downloader {
   }
 }
 
-export async function runCli(
+export async function exec(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
   dependencies: RunCliDependencies = {},
 ): Promise<number> {
-  if (args.includes("--help") || args.includes("-h")) {
-    logger.raw(DOWNLOAD_HELP);
-    return 0;
-  }
+  const options = parseDownloadOptions(args, env);
+  logger.configure({ format: options.logFormat, level: options.logLevel });
 
-  try {
-    const options = parseDownloadOptions(args, env);
-    logger.configure({ format: options.logFormat, level: options.logLevel });
+  const downloader = new Downloader(options, dependencies);
+  const failed = await downloader.start();
 
-    const downloader = new Downloader(options, dependencies);
-    const failed = await downloader.start();
+  return failed ? 1 : 0;
+}
 
-    return failed ? 1 : 0;
-  } catch (error) {
-    const isMisUsage = error instanceof CliUsageError;
-    const message = String(error);
-    if (isMisUsage) {
-      logger.raw(`${message}\n\n${DOWNLOAD_HELP}`);
-      return 2;
-    }
-
-    logger.raw(
-      JSON.stringify({
-        event: "cli.failed",
-        level: "error",
-        msg: message,
-        time: new Date().toISOString(),
-      }),
-    );
-    return 1;
-  }
+export function help() {
+  logger.raw(DOWNLOAD_HELP);
 }
 
 function hasFailures(manifest: CreatorManifest): boolean {
