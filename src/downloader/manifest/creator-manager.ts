@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { CreatorManifest } from "./creator-item.js";
+import { CreatorManifest } from "./creator.js";
 
 export interface CreatorManifestManagerOptions {
   rootPath: string;

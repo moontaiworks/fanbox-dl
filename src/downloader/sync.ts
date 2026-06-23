@@ -24,7 +24,7 @@ import type {
   AssetManifestData,
   CreatorManifest,
   PostManifestData,
-} from "./manifest/creator-item.js";
+} from "./manifest/creator.js";
 import { renderPostMarkdown } from "./markdown.js";
 import {
   assertPathBudget,
