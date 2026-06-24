@@ -73,6 +73,12 @@ export class CreatorManifest implements CreatorManifestData {
   }
 
   async save(): Promise<void> {
+    const posts = Object.values(this.#data.posts);
+    if (!posts.length || posts.every((post) => post?.status !== "complete")) {
+      // If there are no posts, we don't need to save the manifest.
+      return;
+    }
+
     await this.#store.save(this.#manifestPath, this.#data);
   }
 }
