@@ -1,5 +1,4 @@
-import { resolve } from "node:path";
-
+import type { PathManager } from "../path-manager.js";
 import { FileSystemStore, type Store } from "./store.js";
 
 export interface AssetManifestData {
@@ -35,7 +34,7 @@ type AssetStatus =
   | "pending";
 
 interface CreatorManifestOptions {
-  rootPath: string;
+  pathManager: PathManager;
   store?: Store<CreatorManifestData>;
 }
 
@@ -57,7 +56,7 @@ export class CreatorManifest implements CreatorManifestData {
     options: CreatorManifestOptions,
     public readonly creatorId: string,
   ) {
-    this.#manifestPath = resolve(options.rootPath, creatorId, "manifest.json");
+    this.#manifestPath = options.pathManager.file("manifest.json");
     this.#store = options.store ?? new FileSystemStore<CreatorManifestData>();
 
     this.#data = { creatorId, posts: {}, version: 1 };

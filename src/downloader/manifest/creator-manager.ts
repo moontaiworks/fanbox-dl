@@ -1,17 +1,16 @@
-import { resolve } from "node:path";
-
+import type { PathManager } from "../path-manager.js";
 import { CreatorManifest } from "./creator.js";
 
 export interface CreatorManifestManagerOptions {
-  rootPath: string;
+  pathManager: PathManager;
 }
 
 export class CreatorManifestManager {
   #manifests = new Map<string, CreatorManifest>();
-  #rootPath: string;
+  #pathManager: PathManager;
 
   constructor(options: CreatorManifestManagerOptions) {
-    this.#rootPath = resolve(options.rootPath);
+    this.#pathManager = options.pathManager;
   }
 
   async load(creatorId: string): Promise<CreatorManifest> {
@@ -30,7 +29,7 @@ export class CreatorManifestManager {
 
   #createManifest(creatorId: string): CreatorManifest {
     const manifest = new CreatorManifest(
-      { rootPath: this.#rootPath },
+      { pathManager: this.#pathManager.dir(creatorId) },
       creatorId,
     );
     this.#manifests.set(creatorId, manifest);

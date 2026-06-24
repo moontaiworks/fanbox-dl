@@ -8,6 +8,7 @@ import type { DownloadOptions } from "./cli/options.js";
 import { resolveCreatorIds } from "./cli/resolver.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { CreatorManifest } from "./manifest/creator.js";
+import { PathManager } from "./path-manager.js";
 import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
@@ -17,6 +18,7 @@ export interface RunCliDependencies {
 export class Downloader {
   #assetDownloader: AssetDownloader;
   #client: FanboxClient;
+  #pathManager: PathManager;
   #requestWorker: RequestWorker;
 
   constructor(
@@ -42,13 +44,18 @@ export class Downloader {
       headers: requestHeaders,
       transport: this.#requestWorker,
     });
+    this.#pathManager = new PathManager({
+      rootPath: options.output,
+    });
   }
 
   async start() {
     const { output: rootPath } = this.options;
     let failed = false;
     const creatorIds = await resolveCreatorIds(this.#client, this.options);
-    const creatorManifestManager = new CreatorManifestManager({ rootPath });
+    const creatorManifestManager = new CreatorManifestManager({
+      pathManager: this.#pathManager,
+    });
 
     for (const creatorId of creatorIds) {
       logger.info("creator.sync.start", undefined, { creatorId });
