@@ -5,9 +5,9 @@ import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
 import type { DownloadOptions } from "./cli/options.js";
+import { resolveCreatorIds } from "./cli/resolver.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { CreatorManifest } from "./manifest/creator.js";
-import { resolveCreatorIds } from "./resolver.js";
 import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
