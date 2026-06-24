@@ -1,6 +1,5 @@
+import type { FanboxClient } from "../client.js";
 import type { PostListParams, PostSort, PostSummary } from "../models/post.js";
-
-export const POST_LIST_CREATOR_PATH = "post.listCreator";
 
 export interface ListCreatorPostsParams extends PostListParams {
   creatorId: string;
@@ -10,3 +9,13 @@ export interface ListCreatorPostsParams extends PostListParams {
 }
 
 export type ListCreatorPostsResult = PostSummary[];
+
+/**
+ * List posts for a specific creator.
+ */
+export async function listCreatorPosts(
+  this: FanboxClient,
+  params: ListCreatorPostsParams,
+): Promise<ListCreatorPostsResult> {
+  return this.get("post.listCreator", params);
+}
