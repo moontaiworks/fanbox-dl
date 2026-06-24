@@ -4,10 +4,9 @@ import { logger } from "../logger.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
+import type { DownloadOptions } from "./cli/options.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { CreatorManifest } from "./manifest/creator.js";
-import type { DownloadOptions } from "./options.js";
-import { DOWNLOAD_HELP, parseDownloadOptions } from "./options.js";
 import { resolveCreatorIds } from "./resolver.js";
 import { syncCreator } from "./sync.js";
 
@@ -15,7 +14,7 @@ export interface RunCliDependencies {
   transport?: HttpTransport;
 }
 
-class Downloader {
+export class Downloader {
   #assetDownloader: AssetDownloader;
   #client: FanboxClient;
   #requestWorker: RequestWorker;
@@ -72,24 +71,6 @@ class Downloader {
 
     return failed;
   }
-}
-
-export async function exec(
-  args: string[],
-  env: NodeJS.ProcessEnv = process.env,
-  dependencies: RunCliDependencies = {},
-): Promise<number> {
-  const options = parseDownloadOptions(args, env);
-  logger.configure({ format: options.logFormat, level: options.logLevel });
-
-  const downloader = new Downloader(options, dependencies);
-  const failed = await downloader.start();
-
-  return failed ? 1 : 0;
-}
-
-export function help() {
-  logger.raw(DOWNLOAD_HELP);
 }
 
 function hasFailures(manifest: CreatorManifest): boolean {

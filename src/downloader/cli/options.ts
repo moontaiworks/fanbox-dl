@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { logger, type LogLevel } from "../logger.js";
-import { CliUsageError } from "../usage.js";
+import { logger, type LogLevel } from "../../logger.js";
+import { CliUsageError } from "../../usage.js";
 import { normalizeCookie } from "./cookie.js";
 
 export const DOWNLOAD_HELP = `Usage: fanbox-dl download [options]

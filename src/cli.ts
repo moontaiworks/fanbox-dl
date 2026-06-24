@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import * as Downloader from "./downloader/cli.js";
+import * as Downloader from "./downloader/cli/index.js";
 import { logger } from "./logger.js";
 import { CliUsageError } from "./usage.js";
 
