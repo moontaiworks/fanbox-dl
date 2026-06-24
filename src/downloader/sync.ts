@@ -9,14 +9,14 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
-import { logger } from "../logger.js";
 import type {
   ArticlePost,
   FilePost,
   ImagePost,
   Post,
   PostSummary,
-} from "../types.js";
+} from "../client/types.js";
+import { logger } from "../logger.js";
 import type { AssetDownloader } from "./asset.js";
 import { type CreatorPostClient, discoverCreatorPosts } from "./discovery.js";
 import { logDebugErrorResponse } from "./errors.js";

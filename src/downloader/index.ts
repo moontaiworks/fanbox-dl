@@ -1,5 +1,5 @@
-import { FanboxClient } from "../client.js";
-import { createFanboxRequestHeaders } from "../fanbox-headers.js";
+import { FanboxClient } from "../client/client.js";
+import { createFanboxRequestHeaders } from "../client/fanbox-headers.js";
 import { logger } from "../logger.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";

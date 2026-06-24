@@ -5,7 +5,7 @@ import type {
   Post,
   TextPost,
   VideoPost,
-} from "../types.js";
+} from "../client/types.js";
 
 export type AssetPathMap = ReadonlyMap<string, string>;
 

@@ -1,4 +1,4 @@
-import type { PostListParams, PostSort, PostSummary } from "./models/post.js";
+import type { PostListParams, PostSort, PostSummary } from "../models/post.js";
 
 export const POST_LIST_CREATOR_PATH = "post.listCreator";
 

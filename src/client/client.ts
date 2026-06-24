@@ -1,3 +1,5 @@
+import { logger } from "../logger.js";
+import { Http2Transport, type HttpTransport } from "../transport/http2.js";
 import {
   CREATOR_GET_PATH,
   type GetCreatorParams,
@@ -42,8 +44,6 @@ import {
   type PaginateCreatorPostsResult,
   POST_PAGINATE_CREATOR_PATH,
 } from "./endpoints/post-paginate-creator.js";
-import { logger } from "./logger.js";
-import { Http2Transport, type HttpTransport } from "./transport/http2.js";
 
 const DEFAULT_BASE_URL = "https://api.fanbox.cc";
 

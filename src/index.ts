@@ -1,2 +1,2 @@
-export { FanboxApiError, FanboxClient } from "./client.js";
-export type * from "./types.js";
+export { FanboxApiError, FanboxClient } from "./client/client.js";
+export type * from "./client/types.js";

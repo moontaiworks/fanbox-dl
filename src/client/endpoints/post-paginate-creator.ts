@@ -1,4 +1,4 @@
-import type { PostSort } from "./models/post.js";
+import type { PostSort } from "../models/post.js";
 
 export const POST_PAGINATE_CREATOR_PATH = "post.paginateCreator";
 
