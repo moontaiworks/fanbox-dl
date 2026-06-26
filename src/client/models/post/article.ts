@@ -1,4 +1,6 @@
 import type { PostFile, PostImage } from "./asset.js";
+import type { ArticleEmbedItem } from "./embed.js";
+import type { ArticleUrlEmbedItem } from "./url-embed.js";
 
 export type ArticleBlock = ArticleUnknownBlock | KnownArticleBlock;
 
@@ -52,19 +54,3 @@ export type KnownArticleBlock =
   | ArticleImageBlock
   | ArticleParagraphBlock
   | ArticleUrlEmbedBlock;
-
-type ArticleEmbedItem = ArticleEmbedTwitterItem;
-
-interface ArticleEmbedTwitterItem {
-  contentId: string;
-  id: string;
-  serviceProvider: "twitter";
-}
-
-interface ArticleUrlEmbedHtmlItem {
-  html: string;
-  id: string;
-  type: "html";
-}
-
-type ArticleUrlEmbedItem = ArticleUrlEmbedHtmlItem;
