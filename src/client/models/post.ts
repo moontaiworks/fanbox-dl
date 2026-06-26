@@ -1,53 +1,10 @@
+import type { ArticlePostBody } from "./post/article.js";
+import type { PostFile, PostImage } from "./post/asset.js";
 import type { FanboxUser } from "./user.js";
-
-export type ArticleBlock =
-  | ArticleFileBlock
-  | ArticleHeaderBlock
-  | ArticleImageBlock
-  | ArticleParagraphBlock
-  | ArticleUnknownBlock
-  | ArticleUrlEmbedBlock;
-
-export interface ArticleFileBlock {
-  fileId: string;
-  type: "file";
-}
-
-export interface ArticleHeaderBlock {
-  text: string;
-  type: "header";
-}
-
-export interface ArticleImageBlock {
-  imageId: string;
-  type: "image";
-}
-
-export interface ArticleParagraphBlock {
-  text: string;
-  type: "p";
-}
 
 export interface ArticlePost extends PostBase {
   body: ArticlePostBody;
   type: "article";
-}
-
-export interface ArticlePostBody {
-  blocks: ArticleBlock[];
-  fileMap: Record<string, PostFile>;
-  imageMap: Record<string, PostImage>;
-  urlEmbedMap: Record<string, unknown>;
-}
-
-export interface ArticleUnknownBlock {
-  [key: string]: unknown;
-  type: string;
-}
-
-export interface ArticleUrlEmbedBlock {
-  type: "url_embed";
-  urlEmbedId: string;
 }
 
 export interface FilePost extends PostBase {
@@ -70,40 +27,24 @@ export interface ImagePostBody {
   text: string;
 }
 
+export type KnownPost =
+  | ArticlePost
+  | FilePost
+  | ImagePost
+  | TextPost
+  | VideoPost;
+
 export interface NeighboringPost {
   id: string;
   publishedDatetime: string;
   title: string;
 }
 
-export type Post =
-  | ArticlePost
-  | FilePost
-  | ImagePost
-  | TextPost
-  | UnknownPost
-  | VideoPost;
+export type Post = KnownPost | UnknownPost;
 
 export interface PostCover {
   type: "cover_image" | "post_image";
   url: string;
-}
-
-export interface PostFile {
-  extension: string;
-  id: string;
-  name: string;
-  size: number;
-  url: string;
-}
-
-export interface PostImage {
-  extension: string;
-  height: number;
-  id: string;
-  originalUrl: string;
-  thumbnailUrl: string;
-  width: number;
 }
 
 export interface PostListParams {
@@ -144,7 +85,7 @@ export interface TextPostBody {
 }
 
 export interface UnknownPost extends PostBase {
-  type: string;
+  type: string & {};
 }
 
 export type UnknownPostBody = Record<string, unknown>;
