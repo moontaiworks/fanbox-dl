@@ -17,7 +17,7 @@ export class Http2Transport {
   readonly #pool = new Http2SessionManager();
 
   fetch(input: Request | string | URL) {
-    const request = new Request(input);
+    const request = input instanceof Request ? input : new Request(input);
     attachHttp2Headers(request);
 
     const session = this.#pool.getSession(request.url);

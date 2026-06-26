@@ -100,13 +100,15 @@ export class RequestWorker {
   ): Promise<Response> {
     await this.#timeLimiter.wait();
 
-    const response = await this.#transport.fetch(request);
+    const requestObj =
+      request instanceof Request ? request.clone() : new Request(request);
+    const response = await this.#transport.fetch(requestObj);
     if (response.ok) return response;
 
     logger.warn("request.error", undefined, {
       retryRemains,
       status: response.status,
-      url: request instanceof Request ? request.url : String(request),
+      url: requestObj.url,
     });
 
     if (response.status === 429) {
