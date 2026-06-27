@@ -18,7 +18,6 @@ export interface CreatorManifestData {
 
 export interface PostManifestData {
   assets: Partial<Record<string, AssetManifestData>>;
-  directory: string;
   error?: string;
   id: string;
   restricted: boolean;
