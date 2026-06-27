@@ -1,32 +1,56 @@
 export type Content = FileContent | ImageContent | TextContent;
 
-export class ContentBasic {
+interface FileSource {
+  extension: string;
+  id: string;
+  name: string;
+  size: number;
+  url: string;
+}
+
+interface ImageSource {
+  extension: string;
+  id: string;
+  originalUrl: string;
+}
+
+export abstract class ContentBasic {
   type: string;
   constructor(payload: { type: string }) {
     this.type = payload.type;
   }
 }
 
-class MediaContent extends ContentBasic {
+export abstract class MediaContent extends ContentBasic {
+  extension: string;
   id: string;
   url: string;
 
-  constructor(type: string, payload: { id: string; url: string }) {
+  constructor(
+    type: string,
+    payload: { extension: string; id: string; url: string },
+  ) {
     super({ type });
     this.id = payload.id;
     this.url = payload.url;
+    this.extension = payload.extension;
   }
 }
 
 export class FileContent extends MediaContent {
-  constructor(payload: { id: string; url: string }) {
-    super("file", payload);
+  name: string;
+  size: number;
+
+  constructor({ extension, id, name, size, url }: FileSource) {
+    super("file", { extension, id, url });
+    this.name = name;
+    this.size = size;
   }
 }
 
 export class ImageContent extends MediaContent {
-  constructor(payload: { id: string; originalUrl: string }) {
-    super("image", { id: payload.id, url: payload.originalUrl });
+  constructor({ extension, id, originalUrl }: ImageSource) {
+    super("image", { extension, id, url: originalUrl });
   }
 }
 
