@@ -1,4 +1,4 @@
-import type { PathManager } from "../path-manager.js";
+import type { PathManager } from "../fs/path-manager.js";
 import { FileSystemStore, type Store } from "./store.js";
 
 export interface AssetManifestData {

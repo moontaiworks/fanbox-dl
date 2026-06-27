@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { isNotFoundError } from "../filesystem.js";
+import { isNotFoundError } from "../fs/filesystem.js";
 
 export interface Store<T> {
   load(path: string): Promise<null | T>;

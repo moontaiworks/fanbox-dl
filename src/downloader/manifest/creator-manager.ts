@@ -1,4 +1,4 @@
-import type { PathManager } from "../path-manager.js";
+import type { PathManager } from "../fs/path-manager.js";
 import { CreatorManifest } from "./creator.js";
 
 export interface CreatorManifestManagerOptions {

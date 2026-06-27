@@ -6,9 +6,9 @@ import { RequestWorker } from "../transport/worker.js";
 import { AssetDownloader } from "./asset.js";
 import type { DownloadOptions } from "./cli/options.js";
 import { resolveCreatorIds } from "./cli/resolver.js";
+import { PathManager } from "./fs/path-manager.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { CreatorManifest } from "./manifest/creator.js";
-import { PathManager } from "./path-manager.js";
 import { syncCreator } from "./sync.js";
 
 export interface RunCliDependencies {
