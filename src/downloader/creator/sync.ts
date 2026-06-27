@@ -2,7 +2,7 @@ import type { FanboxClient } from "../../client/client.js";
 import type { PathManager } from "../fs/path-manager.js";
 import type { CreatorManifest, PostManifestData } from "../manifest/creator.js";
 import { syncPost } from "../post/sync.js";
-import { discoverAllPosts } from "./discover-posts.js";
+import { discoverCreatorPosts } from "./discover-posts.js";
 
 interface SyncCreatorDeps {
   client: FanboxClient;
@@ -15,7 +15,7 @@ export async function syncCreator({
   manifest,
   pathManager,
 }: SyncCreatorDeps) {
-  const posts = await discoverAllPosts(
+  const posts = await discoverCreatorPosts(
     { client },
     { creatorId: manifest.creatorId },
   );

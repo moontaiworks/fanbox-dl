@@ -4,19 +4,19 @@ import type {
   PostSummary,
 } from "../../client/types.js";
 
-interface DiscoverAllPostsDependencies {
+interface DiscoverCreatorPostsDependencies {
   client: FanboxClient;
 }
 
-interface DiscoverAllPostsOptions {
+interface DiscoverCreatorPostsOptions {
   creatorId: string;
   firstId?: string;
   limit?: number;
 }
 
-export async function discoverAllPosts(
-  { client }: DiscoverAllPostsDependencies,
-  { creatorId, firstId, limit = 300 }: DiscoverAllPostsOptions,
+export async function discoverCreatorPosts(
+  { client }: DiscoverCreatorPostsDependencies,
+  { creatorId, firstId, limit = 300 }: DiscoverCreatorPostsOptions,
 ): Promise<PostSummary[]> {
   const listCreatorPostsOptions = {
     creatorId,
@@ -32,7 +32,7 @@ export async function discoverAllPosts(
   const last = posts.at(-1)!;
 
   // continue fetching until we reach the end of the list
-  const remains = await discoverAllPosts(
+  const remains = await discoverCreatorPosts(
     { client },
     { creatorId, firstId: last.id, limit },
   );
