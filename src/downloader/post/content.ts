@@ -1,4 +1,4 @@
-export type Content = FileContent | ImageContent | TextContent;
+export type Content = FileContent | ImageContent | TextContent | UnknownContent;
 
 interface FileSource {
   extension: string;
@@ -64,5 +64,11 @@ export class TextContent<
     super({ type: "text" });
     this.text = text;
     this.props = remains;
+  }
+}
+
+export class UnknownContent<T = unknown> extends ContentBasic {
+  constructor(public readonly payload: T) {
+    super({ type: "unknown" });
   }
 }

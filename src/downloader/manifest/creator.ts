@@ -25,19 +25,14 @@ export interface PostManifestData {
   updatedDatetime: string;
 }
 
-type AssetStatus =
-  | "complete"
-  | "downloading"
-  | "failed"
-  | "obsolete"
-  | "pending";
+type AssetStatus = "complete" | "failed" | "obsolete" | "pending";
 
 interface CreatorManifestOptions {
   pathManager: PathManager;
   store?: Store<CreatorManifestData>;
 }
 
-type PostStatus = "complete" | "failed" | "pending" | "skipped";
+type PostStatus = "complete" | "failed" | "partial" | "pending" | "skipped";
 
 export class CreatorManifest implements CreatorManifestData {
   readonly version = 1 as const;

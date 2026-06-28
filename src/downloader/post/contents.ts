@@ -8,7 +8,12 @@ import type {
 } from "../../client/models/post.js";
 import { formatArticleContents } from "./article.js";
 import type { Content } from "./content.js";
-import { FileContent, ImageContent, TextContent } from "./content.js";
+import {
+  FileContent,
+  ImageContent,
+  TextContent,
+  UnknownContent,
+} from "./content.js";
 
 interface TypeMap {
   article: ArticlePost;
@@ -35,7 +40,10 @@ export function formatPostContents(post: Post): Content[] {
 
   if (isPostType("video", post)) {
     // TODO: warn unknown video post format
-    return [];
+    const assets = [new UnknownContent(post.body.video)];
+
+    if (post.body.text) return [...assets, new TextContent(post.body)];
+    return assets;
   }
 
   if (isPostType("text", post)) return [new TextContent(post.body)];
@@ -43,7 +51,7 @@ export function formatPostContents(post: Post): Content[] {
   if (isPostType("article", post)) return formatArticleContents(post);
 
   // TODO: warn unknown post type
-  return [];
+  return [new UnknownContent(post.body)];
 }
 
 function isPostType<T extends keyof TypeMap>(
