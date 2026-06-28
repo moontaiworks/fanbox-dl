@@ -26,7 +26,6 @@ Auth:
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
   --flat-posts              Store post files directly under each creator.
-  --verify-assets           Verify existing asset size and SHA-256 locally.
 
 Requests:
   --concurrency <n>         Concurrent requests. Default: 5.
@@ -35,7 +34,6 @@ Requests:
   --max-retries <n>         Retry attempts. Default: 3.
 
 Output:
-  --log-format json|pretty  Default: json.
   --log-level <level>       fatal|error|warn|info|debug|trace|silent. Default: info.
   --help                    Show this help.
 `;
@@ -47,7 +45,6 @@ export interface DownloadOptions {
   flatPosts: boolean;
   following: boolean;
   ignoreCreatorIds: string[];
-  logFormat: "json" | "pretty";
   logLevel: LevelWithSilent;
   maxRetries: number;
   output: string;
@@ -55,7 +52,6 @@ export interface DownloadOptions {
   requestIntervalMs: number;
   supporting: boolean;
   userAgent?: string;
-  verifyAssets: boolean;
 }
 
 export function parseDownloadOptions(
@@ -66,8 +62,6 @@ export function parseDownloadOptions(
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting)
     throw new CliUsageError("at least one creator selector is required");
-  if (values["log-format"] !== "json" && values["log-format"] !== "pretty")
-    throw new CliUsageError("log-format must be json or pretty");
   if (!isLogLevel(values["log-level"]))
     throw new CliUsageError(
       "log-level must be fatal, error, warn, info, debug, trace or silent",
@@ -89,7 +83,6 @@ export function parseDownloadOptions(
     flatPosts: values["flat-posts"],
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
-    logFormat: values["log-format"],
     logLevel: values["log-level"],
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
@@ -105,7 +98,6 @@ export function parseDownloadOptions(
     ),
     supporting: values.supporting,
     userAgent: values["user-agent"],
-    verifyAssets: values["verify-assets"],
   };
 }
 
@@ -135,7 +127,6 @@ function parseDownloadArgs(args: string[]) {
         "flat-posts": { default: false, type: "boolean" },
         following: { default: false, type: "boolean" },
         "ignore-creator": { multiple: true, type: "string" },
-        "log-format": { default: "json", type: "string" },
         "log-level": { default: "info", type: "string" },
         "max-retries": { default: "3", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
@@ -143,7 +134,6 @@ function parseDownloadArgs(args: string[]) {
         "request-interval-ms": { default: "500", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },
-        "verify-assets": { default: false, type: "boolean" },
       },
       strict: true,
     });
