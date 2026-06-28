@@ -1,5 +1,3 @@
-import { logger } from "../../logger.js";
-
 export interface CreatorResolverClient {
   listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
   listSupportingPlans(): Promise<{ creatorId: string }[]>;
@@ -12,11 +10,14 @@ export interface ResolveCreatorIdsOptions {
   supporting: boolean;
 }
 
+interface ResolveCreatorIdsDeps {
+  client: CreatorResolverClient;
+}
+
 export async function resolveCreatorIds(
-  client: CreatorResolverClient,
+  { client }: ResolveCreatorIdsDeps,
   options: ResolveCreatorIdsOptions,
 ): Promise<string[]> {
-  logger.debug("init.creators", "Resolving creator IDs");
   const creatorIds = new Set(options.creatorIds);
 
   if (options.following) {
@@ -37,9 +38,6 @@ export async function resolveCreatorIds(
   }
 
   const result = [...creatorIds];
-  logger.info("init.creators", `Got ${result.length} creators`, {
-    creatorIds: result,
-  });
 
   return result;
 }

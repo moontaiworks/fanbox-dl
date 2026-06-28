@@ -1,6 +1,4 @@
-import { logger } from "../../logger.js";
-import type { RunCliDependencies } from "../index.js";
-import { Downloader } from "../index.js";
+import { download, type RunCliDependencies } from "../index.js";
 import { DOWNLOAD_HELP, parseDownloadOptions } from "./options.js";
 
 export async function exec(
@@ -9,14 +7,12 @@ export async function exec(
   dependencies: RunCliDependencies = {},
 ): Promise<number> {
   const options = parseDownloadOptions(args, env);
-  logger.configure({ format: options.logFormat, level: options.logLevel });
 
-  const downloader = new Downloader(options, dependencies);
-  const failed = await downloader.start();
+  const failed = await download(options, dependencies);
 
   return failed ? 1 : 0;
 }
 
 export function help() {
-  logger.raw(DOWNLOAD_HELP);
+  console.log(DOWNLOAD_HELP);
 }

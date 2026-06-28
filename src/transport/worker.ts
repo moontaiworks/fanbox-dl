@@ -1,4 +1,3 @@
-import { logger } from "../logger.js";
 import { Http2Transport, type HttpTransport } from "./http2.js";
 
 export interface RequestQueueOptions {
@@ -17,18 +16,10 @@ class ConcurrencyLimiter {
 
   async acquire() {
     if (this.#active >= this.concurrency) {
-      logger.debug("request.concurrent.pending", undefined, {
-        active: this.#active,
-        concurrency: this.concurrency,
-      });
       await new Promise<void>((release) => this.#queue.push(release));
     }
 
     ++this.#active;
-    logger.debug("request.concurrent.passed", undefined, {
-      active: this.#active,
-      concurrency: this.concurrency,
-    });
   }
 
   release() {
@@ -53,11 +44,6 @@ class TimeLimiter {
     const now = Date.now();
     if (this.#availableAt > now) {
       const waitMs = this.#availableAt - now;
-      logger.debug("request.pending", undefined, {
-        availableAt: this.#availableAt,
-        now,
-        waitMs,
-      });
       await sleep(waitMs);
     }
 
@@ -105,26 +91,14 @@ export class RequestWorker {
     const response = await this.#transport.fetch(requestObj);
     if (response.ok) return response;
 
-    logger.warn("request.error", undefined, {
-      retryRemains,
-      status: response.status,
-      url: requestObj.url,
-    });
-
     if (response.status === 429) {
       const retryAfter =
         this.#rateLimitPauseMs ?? parseRetryAfter(response) ?? 60_000;
       const availableAt = Date.now() + retryAfter;
       this.#timeLimiter.setNextAvailableAt(availableAt);
-      logger.warn(
-        "request.rate-limit",
-        "Rate limit reached, pausing requests",
-        { availableAt, retryAfter },
-      );
     }
 
     if (retryRemains <= 0) {
-      logger.error("request.failed", "Request failed after maximum retries");
       return response;
     }
 

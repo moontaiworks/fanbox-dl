@@ -1,4 +1,3 @@
-import { logger } from "../logger.js";
 import { Http2Transport, type HttpTransport } from "../transport/http2.js";
 import { getCreator } from "./endpoints/creator-get.js";
 import { paginateCreatorPosts } from "./endpoints/creator-list-pages.js";
@@ -71,12 +70,7 @@ export class FanboxClient {
     const response = await this.#transport.fetch(request);
     const body = await response.json();
     if (!response.ok) {
-      const { status, statusText } = response;
-      const info = { path, query, status, statusText };
-      logger.log("client.failed", undefined, {
-        debug: { body, ...info },
-        info,
-      });
+      // TODO: log
       throw new FanboxApiError(response, body);
     }
 

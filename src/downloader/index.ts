@@ -1,6 +1,5 @@
 import { FanboxClient } from "../client/client.js";
 import { createFanboxRequestHeaders } from "../client/fanbox-headers.js";
-import { logger } from "../logger.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
 import type { DownloadOptions } from "./cli/options.js";
@@ -16,7 +15,7 @@ export interface RunCliDependencies {
 
 export async function download(
   options: DownloadOptions,
-  dependencies: RunCliDependencies,
+  { transport: customTransport }: RunCliDependencies,
 ) {
   const headers = createFanboxRequestHeaders({
     cookie: options.cookie,
@@ -27,7 +26,7 @@ export async function download(
     intervalMs: options.requestIntervalMs,
     maxRetries: options.maxRetries,
     rateLimitPauseMs: options.rateLimitPauseMs,
-    transport: dependencies.transport,
+    transport: customTransport,
   });
   const pathManager = new PathManager({
     flatPosts: options.flatPosts,
@@ -36,13 +35,12 @@ export async function download(
   const client = new FanboxClient({ headers, transport });
 
   let failed = false;
-  const creatorIds = await resolveCreatorIds(client, options);
+  const creatorIds = await resolveCreatorIds({ client }, options);
   const creatorManifestManager = new CreatorManifestManager({
     pathManager,
   });
 
   for (const creatorId of creatorIds) {
-    logger.info("creator.sync.start", undefined, { creatorId });
     const creatorManifest = await creatorManifestManager.load(creatorId);
 
     await syncCreator({
@@ -51,14 +49,13 @@ export async function download(
       manifest: creatorManifest,
       pathManager,
       transport,
-    }).catch((error: unknown) => {
-      logger.error("creator.sync.error", undefined, { creatorId, error });
+    }).catch(() => {
+      // TODO: log
       failed = true;
     });
 
     const success = !hasFailures(creatorManifest);
     failed ||= !success;
-    logger.info("creator.sync.done", undefined, { creatorId, success });
     await creatorManifest.save();
   }
 

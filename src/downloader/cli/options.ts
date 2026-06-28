@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { logger, type LogLevel } from "../../logger.js";
+import type { LevelWithSilent } from "pino";
+
 import { CliUsageError } from "../../usage.js";
 import { normalizeCookie } from "./cookie.js";
 
@@ -35,7 +36,7 @@ Requests:
 
 Output:
   --log-format json|pretty  Default: json.
-  --log-level <level>       trace|debug|info|warn|error|silent. Default: info.
+  --log-level <level>       fatal|error|warn|info|debug|trace|silent. Default: info.
   --help                    Show this help.
 `;
 
@@ -47,7 +48,7 @@ export interface DownloadOptions {
   following: boolean;
   ignoreCreatorIds: string[];
   logFormat: "json" | "pretty";
-  logLevel: LogLevel;
+  logLevel: LevelWithSilent;
   maxRetries: number;
   output: string;
   rateLimitPauseMs?: number;
@@ -69,7 +70,7 @@ export function parseDownloadOptions(
     throw new CliUsageError("log-format must be json or pretty");
   if (!isLogLevel(values["log-level"]))
     throw new CliUsageError(
-      "log-level must be trace, debug, info, warn, error or silent",
+      "log-level must be fatal, error, warn, info, debug, trace or silent",
     );
 
   const cookieFile = values["cookie-file"];
@@ -108,12 +109,19 @@ export function parseDownloadOptions(
   };
 }
 
-function isLogLevel(value: string): value is LogLevel {
-  return ["debug", "error", "info", "silent", "trace", "warn"].includes(value);
+function isLogLevel(value: string): value is LevelWithSilent {
+  return [
+    "debug",
+    "error",
+    "fatal",
+    "info",
+    "silent",
+    "trace",
+    "warn",
+  ].includes(value);
 }
 
 function parseDownloadArgs(args: string[]) {
-  logger.debug(`Parsing command options from args: ${args.join(" ")}`);
   try {
     return parseArgs({
       allowPositionals: false,

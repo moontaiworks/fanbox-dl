@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import * as Downloader from "./downloader/cli/index.js";
-import { logger } from "./logger.js";
 import { CliUsageError } from "./usage.js";
 
 interface Command {
@@ -17,7 +16,7 @@ const [cmd, ...args] = process.argv.slice(2);
 
 const command = commands[cmd];
 if (!command) {
-  logger.raw(
+  console.warn(
     [
       `Unknown command: ${cmd}`,
       `Available commands: ${Object.keys(commands).join(", ")}`,
@@ -44,7 +43,7 @@ void command
       process.exit(2);
     }
 
-    logger.raw(
+    console.warn(
       JSON.stringify({
         event: "cli.failed",
         level: "error",
