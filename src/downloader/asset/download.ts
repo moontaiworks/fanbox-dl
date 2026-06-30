@@ -4,12 +4,15 @@ import fs, { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
+import type { Logger } from "pino";
+
 import type { HttpTransport } from "../../transport/http2.js";
 import type { PathManager } from "../fs/path-manager.js";
 import type { MediaContent } from "../post/content.js";
 
 interface DownloadAssetDeps {
   headers?: Record<string, string>;
+  logger: Logger;
   pathManager: PathManager;
   transport: HttpTransport;
 }
@@ -37,9 +40,12 @@ class AssetDownloadError extends Error {
 }
 
 export async function downloadAsset(
-  { headers = {}, pathManager, transport }: DownloadAssetDeps,
+  { headers = {}, logger, pathManager, transport }: DownloadAssetDeps,
   { destination, fallbackDateTime, mediaContent }: DownloadAssetOptions,
 ) {
+  logger.debug(
+    `Downloading ${mediaContent.type} asset ${mediaContent.id} to ${destination}`,
+  );
   const tempDir = await fs.mkdtempDisposable(pathManager.name, {
     encoding: "utf-8",
   });

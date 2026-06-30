@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 export interface CreatorResolverClient {
   listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
   listSupportingPlans(): Promise<{ creatorId: string }[]>;
@@ -12,23 +14,34 @@ export interface ResolveCreatorIdsOptions {
 
 interface ResolveCreatorIdsDeps {
   client: CreatorResolverClient;
+  logger: Logger;
 }
 
 export async function resolveCreatorIds(
-  { client }: ResolveCreatorIdsDeps,
+  { client, logger }: ResolveCreatorIdsDeps,
   options: ResolveCreatorIdsOptions,
 ): Promise<string[]> {
+  logger.debug({ options }, "Resolving creator IDs");
   const creatorIds = new Set(options.creatorIds);
 
   if (options.following) {
     const { creators } = await client.listFollowingCreators();
+    logger.trace(
+      { creators: creators.map((c) => c.creatorId) },
+      `Retrieved ${creators.length} following creators`,
+    );
     for (const creator of creators) {
       creatorIds.add(creator.creatorId);
     }
   }
 
   if (options.supporting) {
-    for (const plan of await client.listSupportingPlans()) {
+    const plans = await client.listSupportingPlans();
+    logger.trace(
+      { plans: plans.map((p) => p.creatorId) },
+      `Retrieved ${plans.length} supporting plans`,
+    );
+    for (const plan of plans) {
       creatorIds.add(plan.creatorId);
     }
   }
@@ -38,6 +51,10 @@ export async function resolveCreatorIds(
   }
 
   const result = [...creatorIds];
+  logger.debug(
+    { creatorIds: result },
+    `Resolved total ${result.length} creator IDs`,
+  );
 
   return result;
 }

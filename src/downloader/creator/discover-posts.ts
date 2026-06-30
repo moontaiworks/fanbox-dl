@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { FanboxClient } from "../../client/client.js";
 import type {
   ListCreatorPostsParams,
@@ -6,6 +8,7 @@ import type {
 
 interface DiscoverCreatorPostsDependencies {
   client: FanboxClient;
+  logger: Logger;
 }
 
 interface DiscoverCreatorPostsOptions {
@@ -15,9 +18,12 @@ interface DiscoverCreatorPostsOptions {
 }
 
 export async function discoverCreatorPosts(
-  { client }: DiscoverCreatorPostsDependencies,
+  { client, logger }: DiscoverCreatorPostsDependencies,
   { creatorId, firstId, limit = 300 }: DiscoverCreatorPostsOptions,
 ): Promise<PostSummary[]> {
+  logger.debug(
+    `Discovering max ${limit} posts from ${firstId ?? "start"} for creator ${creatorId}`,
+  );
   const listCreatorPostsOptions = {
     creatorId,
     firstId,
@@ -25,6 +31,7 @@ export async function discoverCreatorPosts(
     sort: "newest",
   } satisfies ListCreatorPostsParams;
   const posts = await client.listCreatorPosts(listCreatorPostsOptions);
+  logger.debug(`Discovered ${posts.length} posts for creator ${creatorId}`);
   if (posts.length < limit) return posts;
 
   // check if the last post is already in the manifest, if so, we can stop
@@ -33,7 +40,7 @@ export async function discoverCreatorPosts(
 
   // continue fetching until we reach the end of the list
   const remains = await discoverCreatorPosts(
-    { client },
+    { client, logger },
     { creatorId, firstId: last.id, limit },
   );
 

@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import { Http2Transport, type HttpTransport } from "./http2.js";
 
 export interface RequestQueueOptions {
@@ -10,12 +12,22 @@ export interface RequestQueueOptions {
 
 class ConcurrencyLimiter {
   #active = 0;
+  #logger: Logger;
   #queue: (() => void)[] = [];
 
-  constructor(private concurrency: number) {}
+  constructor(
+    { logger }: { logger: Logger },
+    private concurrency: number,
+  ) {
+    this.#logger = logger;
+    this.#logger.trace({ concurrency }, "Initialized ConcurrencyLimiter");
+  }
 
   async acquire() {
     if (this.#active >= this.concurrency) {
+      this.#logger.trace(
+        `Concurrency limit reached (${this.#active}/${this.concurrency}), waiting for release.`,
+      );
       await new Promise<void>((release) => this.#queue.push(release));
     }
 
@@ -26,17 +38,30 @@ class ConcurrencyLimiter {
     --this.#active;
     if (this.#queue.length > 0) {
       const next = this.#queue.shift();
-      if (next) next();
+      if (next) {
+        this.#logger.trace(
+          `Concurrency limit released (${this.#active}/${this.concurrency}), processing next request.`,
+        );
+        next();
+      }
     }
   }
 }
 
 class TimeLimiter {
   #availableAt = 0;
+  #logger: Logger;
 
-  constructor(private intervalMs: number) {}
+  constructor(
+    { logger }: { logger: Logger },
+    private intervalMs: number,
+  ) {
+    this.#logger = logger;
+    this.#logger.trace(`Initialized TimeLimiter with interval ${intervalMs}ms`);
+  }
 
   setNextAvailableAt(availableAt: number) {
+    this.#logger.trace(`Setting next available time to ${availableAt}.`);
     this.#availableAt = availableAt;
   }
 
@@ -44,32 +69,51 @@ class TimeLimiter {
     const now = Date.now();
     if (this.#availableAt > now) {
       const waitMs = this.#availableAt - now;
+      this.#logger.trace(
+        `Waiting for time limiter for ${waitMs}ms, until ${this.#availableAt}.`,
+      );
       await sleep(waitMs);
+      this.#logger.trace(`Time limiter continued at ${this.#availableAt}.`);
     }
 
-    this.#availableAt = Date.now() + this.intervalMs;
+    this.setNextAvailableAt(Date.now() + this.intervalMs);
   }
 }
 
 export class RequestWorker {
   #concurrencyLimiter: ConcurrencyLimiter;
+  #logger: Logger;
   #maxRetries: number;
   #rateLimitPauseMs?: number;
   #timeLimiter: TimeLimiter;
   #transport: HttpTransport;
 
-  constructor({
-    concurrency = 5,
-    intervalMs = 500,
-    maxRetries = 3,
-    rateLimitPauseMs,
-    transport = new Http2Transport(),
-  }: RequestQueueOptions = {}) {
+  constructor(
+    { logger }: { logger: Logger },
+    {
+      concurrency = 5,
+      intervalMs = 500,
+      maxRetries = 3,
+      rateLimitPauseMs,
+      transport = new Http2Transport(),
+    }: RequestQueueOptions = {},
+  ) {
+    this.#logger = logger;
     this.#transport = transport;
-    this.#concurrencyLimiter = new ConcurrencyLimiter(concurrency);
-    this.#timeLimiter = new TimeLimiter(intervalMs);
+    this.#concurrencyLimiter = new ConcurrencyLimiter({ logger }, concurrency);
+    this.#timeLimiter = new TimeLimiter({ logger }, intervalMs);
     this.#maxRetries = maxRetries;
     this.#rateLimitPauseMs = rateLimitPauseMs;
+    logger.trace(
+      {
+        concurrency,
+        intervalMs,
+        maxRetries,
+        rateLimitPauseMs,
+        transport: transport.constructor.name,
+      },
+      "Initialized RequestWorker",
+    );
   }
 
   async fetch(request: Request | string | URL) {
@@ -84,6 +128,9 @@ export class RequestWorker {
     request: Request | string | URL,
     retryRemains = this.#maxRetries,
   ): Promise<Response> {
+    this.#logger.trace(
+      `Fetching request with max ${retryRemains} retries to ${request instanceof Request ? request.url : request.toString()}`,
+    );
     await this.#timeLimiter.wait();
 
     const requestObj =
@@ -95,10 +142,15 @@ export class RequestWorker {
       const retryAfter =
         this.#rateLimitPauseMs ?? parseRetryAfter(response) ?? 60_000;
       const availableAt = Date.now() + retryAfter;
+      this.#logger.warn("Received 429 Too Many Requests. Pausing requests.");
+      await sleep(retryAfter);
       this.#timeLimiter.setNextAvailableAt(availableAt);
     }
 
     if (retryRemains <= 0) {
+      this.#logger.error(
+        `Request failed with ${response.status} ${response.statusText} after maximum retries.`,
+      );
       return response;
     }
 

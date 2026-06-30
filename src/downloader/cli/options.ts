@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import type { LevelWithSilent } from "pino";
+import type { Logger } from "pino";
 
 import { CliUsageError } from "../../usage.js";
 import { normalizeCookie } from "./cookie.js";
@@ -45,7 +45,6 @@ export interface DownloadOptions {
   flatPosts: boolean;
   following: boolean;
   ignoreCreatorIds: string[];
-  logLevel: LevelWithSilent;
   maxRetries: number;
   output: string;
   rateLimitPauseMs?: number;
@@ -54,27 +53,21 @@ export interface DownloadOptions {
   userAgent?: string;
 }
 
+interface ParseDownloadOptionsDeps {
+  logger: Logger;
+}
+
 export function parseDownloadOptions(
+  { logger }: ParseDownloadOptionsDeps,
   args: string[],
-  env: NodeJS.ProcessEnv = process.env,
 ): DownloadOptions {
+  logger.trace({ args }, "Parsing download options");
   const { values } = parseDownloadArgs(args);
   const creatorIds = values.creator ?? [];
   if (creatorIds.length === 0 && !values.following && !values.supporting)
     throw new CliUsageError("at least one creator selector is required");
-  if (!isLogLevel(values["log-level"]))
-    throw new CliUsageError(
-      "log-level must be fatal, error, warn, info, debug, trace or silent",
-    );
 
-  const cookieFile = values["cookie-file"];
-  const cookie = normalizeCookie(
-    values.cookie ??
-      (cookieFile === undefined
-        ? undefined
-        : readFileSync(cookieFile, "utf8")) ??
-      env.FANBOX_SESSION_ID,
-  );
+  const cookie = parseCookie({ logger }, values);
 
   return {
     concurrency: parsePositiveInteger("concurrency", values.concurrency),
@@ -83,7 +76,6 @@ export function parseDownloadOptions(
     flatPosts: values["flat-posts"],
     following: values.following,
     ignoreCreatorIds: values["ignore-creator"] ?? [],
-    logLevel: values["log-level"],
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
     rateLimitPauseMs: values["rate-limit-pause-ms"]
@@ -101,16 +93,31 @@ export function parseDownloadOptions(
   };
 }
 
-function isLogLevel(value: string): value is LevelWithSilent {
-  return [
-    "debug",
-    "error",
-    "fatal",
-    "info",
-    "silent",
-    "trace",
-    "warn",
-  ].includes(value);
+function parseCookie(
+  { logger }: ParseDownloadOptionsDeps,
+  values: ReturnType<typeof parseDownloadArgs>["values"],
+) {
+  const cookieFile = values["cookie-file"];
+  if (values.cookie) {
+    logger.trace({ cookie: values.cookie }, "Using cookie from CLI option");
+    return normalizeCookie(values.cookie);
+  }
+
+  if (cookieFile) {
+    logger.trace({ cookieFile }, "Using cookie from file");
+    return normalizeCookie(readFileSync(cookieFile, "utf8"));
+  }
+
+  if (process.env.FANBOX_SESSION_ID) {
+    logger.trace(
+      { FANBOX_SESSION_ID: process.env.FANBOX_SESSION_ID },
+      "Using cookie from environment",
+    );
+    return normalizeCookie(process.env.FANBOX_SESSION_ID);
+  }
+
+  logger.trace("No cookie provided");
+  return undefined;
 }
 
 function parseDownloadArgs(args: string[]) {

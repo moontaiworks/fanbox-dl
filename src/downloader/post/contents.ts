@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type {
   ArticlePost,
   FilePost,
@@ -15,6 +17,10 @@ import {
   UnknownContent,
 } from "./content.js";
 
+interface FormatPostContentsDeps {
+  logger: Logger;
+}
+
 interface TypeMap {
   article: ArticlePost;
   file: FilePost;
@@ -23,7 +29,10 @@ interface TypeMap {
   video: VideoPost;
 }
 
-export function formatPostContents(post: Post): Content[] {
+export function formatPostContents(
+  { logger }: FormatPostContentsDeps,
+  post: Post,
+): Content[] {
   if (isPostType("image", post)) {
     const assets = post.body.images.map((image) => new ImageContent(image));
 
@@ -39,7 +48,9 @@ export function formatPostContents(post: Post): Content[] {
   }
 
   if (isPostType("video", post)) {
-    // TODO: warn unknown video post format
+    logger.warn(
+      `Post ${post.id} has unknown video provider ${post.body.video.serviceProvider}, skipping video content.`,
+    );
     const assets = [new UnknownContent(post.body.video)];
 
     if (post.body.text) return [...assets, new TextContent(post.body)];
@@ -50,7 +61,7 @@ export function formatPostContents(post: Post): Content[] {
 
   if (isPostType("article", post)) return formatArticleContents(post);
 
-  // TODO: warn unknown post type
+  logger.warn(`Post ${post.id} has unknown type ${post.type}, skipping.`);
   return [new UnknownContent(post.body)];
 }
 

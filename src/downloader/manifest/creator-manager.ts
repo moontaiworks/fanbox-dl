@@ -1,16 +1,21 @@
+import type { Logger } from "pino";
+
 import type { PathManager } from "../fs/path-manager.js";
 import { CreatorManifest } from "./creator.js";
 
-export interface CreatorManifestManagerOptions {
+interface CreatorManifestManagerDeps {
+  logger: Logger;
   pathManager: PathManager;
 }
 
 export class CreatorManifestManager {
+  #logger: Logger;
   #manifests = new Map<string, CreatorManifest>();
   #pathManager: PathManager;
 
-  constructor(options: CreatorManifestManagerOptions) {
-    this.#pathManager = options.pathManager;
+  constructor({ logger, pathManager }: CreatorManifestManagerDeps) {
+    this.#logger = logger;
+    this.#pathManager = pathManager;
   }
 
   async load(creatorId: string): Promise<CreatorManifest> {
@@ -29,7 +34,7 @@ export class CreatorManifestManager {
 
   #createManifest(creatorId: string): CreatorManifest {
     const manifest = new CreatorManifest(
-      { pathManager: this.#pathManager.dir(creatorId) },
+      { logger: this.#logger, pathManager: this.#pathManager.dir(creatorId) },
       creatorId,
     );
     this.#manifests.set(creatorId, manifest);

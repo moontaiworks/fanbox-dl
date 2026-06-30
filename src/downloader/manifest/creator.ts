@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { PathManager } from "../fs/path-manager.js";
 import { FileSystemStore, type Store } from "./store.js";
 
@@ -27,7 +29,8 @@ export interface PostManifestData {
 
 type AssetStatus = "complete" | "failed" | "obsolete" | "pending";
 
-interface CreatorManifestOptions {
+interface CreatorManifestDeps {
+  logger: Logger;
   pathManager: PathManager;
   store?: Store<CreatorManifestData>;
 }
@@ -42,14 +45,15 @@ export class CreatorManifest implements CreatorManifestData {
 
   #data: CreatorManifestData;
   #loaded = false;
+  #logger: Logger;
   #manifestPath: string;
-
   #store: Store<CreatorManifestData>;
 
   constructor(
-    options: CreatorManifestOptions,
+    options: CreatorManifestDeps,
     public readonly creatorId: string,
   ) {
+    this.#logger = options.logger;
     this.#manifestPath = options.pathManager.file("manifest.json");
     this.#store = options.store ?? new FileSystemStore<CreatorManifestData>();
 
@@ -58,6 +62,10 @@ export class CreatorManifest implements CreatorManifestData {
 
   async load(): Promise<void> {
     if (this.#loaded) return;
+    this.#logger.trace(
+      `Loading creator manifest for ${this.creatorId} from ${this.#manifestPath}`,
+    );
+
     this.#loaded = true;
 
     const data = await this.#store.load(this.#manifestPath);
@@ -69,9 +77,15 @@ export class CreatorManifest implements CreatorManifestData {
     const posts = Object.values(this.#data.posts);
     if (!posts.length || posts.every((post) => post?.status !== "complete")) {
       // If there are no posts, we don't need to save the manifest.
+      this.#logger.trace(
+        `No posts in creator manifest for ${this.creatorId}, skipping save.`,
+      );
       return;
     }
 
+    this.#logger.trace(
+      `Saving creator manifest for ${this.creatorId} to ${this.#manifestPath}`,
+    );
     await this.#store.save(this.#manifestPath, this.#data);
   }
 }

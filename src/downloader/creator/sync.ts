@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import type { FanboxClient } from "../../client/client.js";
 import type { HttpTransport } from "../../transport/http2.js";
 import type { PathManager } from "../fs/path-manager.js";
@@ -8,6 +10,7 @@ import { discoverCreatorPosts } from "./discover-posts.js";
 interface SyncCreatorDeps {
   client: FanboxClient;
   headers?: Record<string, string>;
+  logger: Logger;
   manifest: CreatorManifest;
   pathManager: PathManager;
   transport: HttpTransport;
@@ -16,29 +19,49 @@ interface SyncCreatorDeps {
 export async function syncCreator({
   client,
   headers,
+  logger,
   manifest,
   pathManager,
   transport,
 }: SyncCreatorDeps) {
-  const posts = await discoverCreatorPosts(
-    { client },
+  const postSummaries = await discoverCreatorPosts(
+    { client, logger },
     { creatorId: manifest.creatorId },
   );
+  logger.debug(
+    `Discovered total ${postSummaries.length} posts for creator ${manifest.creatorId}`,
+  );
 
-  for (const postSummary of posts) {
+  let index = 0;
+  for (const postSummary of postSummaries) {
+    logger.debug(
+      `Syncing ${++index}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
+    );
     const postPathManager = pathManager.post(postSummary);
     manifest.posts[postSummary.id] = await syncPost(
-      { client, headers, manifest, pathManager: postPathManager, transport },
+      {
+        client,
+        headers,
+        logger,
+        manifest,
+        pathManager: postPathManager,
+        transport,
+      },
       postSummary,
-    ).catch(
-      (error: unknown): PostManifestData => ({
+    ).catch((err: unknown): PostManifestData => {
+      const manifest = {
         assets: {},
-        error: String(error),
+        error: String(err),
         id: postSummary.id,
         restricted: postSummary.isRestricted,
         status: "failed",
         updatedDatetime: postSummary.updatedDatetime,
-      }),
-    );
+      } satisfies PostManifestData;
+      logger.error(
+        { err },
+        `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+      );
+      return manifest;
+    });
   }
 }

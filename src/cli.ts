@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 
+import { parseArgs } from "node:util";
+
+import type { LevelWithSilent, Logger } from "pino";
+import { pino } from "pino";
+
 import * as Downloader from "./downloader/cli/index.js";
 import { CliUsageError } from "./usage.js";
 
 interface Command {
-  exec(args: string[]): Promise<number>;
+  exec(deps: { logger: Logger }, args: string[]): Promise<number>;
   help(): void;
 }
 
@@ -30,27 +35,51 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0);
 }
 
+const { "log-level": logLevel = "info" } = parseArgs({
+  options: { "log-level": { type: "string" } },
+  strict: false,
+}).values;
+function isLogLevel(level: unknown): level is LevelWithSilent {
+  const availableLevel = [
+    "debug",
+    "error",
+    "fatal",
+    "info",
+    "silent",
+    "trace",
+    "warn",
+  ];
+
+  return typeof level === "string" && availableLevel.includes(level);
+}
+
+if (!isLogLevel(logLevel)) {
+  console.error(
+    "log-level must be fatal, error, warn, info, debug, trace or silent",
+  );
+  process.exit(1);
+}
+
+const logger = pino({
+  base: {},
+  level: logLevel,
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
+
 void command
-  .exec(args)
+  .exec({ logger }, args)
   .then((exitCode) => {
     process.exitCode = exitCode;
   })
-  .catch((error: unknown) => {
-    const isMisUsage = error instanceof CliUsageError;
-    const message = String(error);
+  .catch((err: unknown) => {
+    const isMisUsage = err instanceof CliUsageError;
     if (isMisUsage) {
+      console.error(`Error: ${err.message}\n`);
       command.help();
       process.exit(2);
     }
 
-    console.warn(
-      JSON.stringify({
-        event: "cli.failed",
-        level: "error",
-        msg: message,
-        time: new Date().toISOString(),
-      }),
-    );
+    logger.error({ err, event: "cli.failed" });
 
-    throw error;
+    throw err;
   });

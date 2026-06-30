@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+
 import { FanboxClient } from "../client/client.js";
 import { createFanboxRequestHeaders } from "../client/fanbox-headers.js";
 import type { HttpTransport } from "../transport/http2.js";
@@ -10,24 +12,30 @@ import { CreatorManifestManager } from "./manifest/creator-manager.js";
 import type { CreatorManifest } from "./manifest/creator.js";
 
 export interface RunCliDependencies {
+  logger: Logger;
   transport?: HttpTransport;
 }
 
 export async function download(
+  { logger, transport: customTransport }: RunCliDependencies,
   options: DownloadOptions,
-  { transport: customTransport }: RunCliDependencies,
 ) {
+  logger.trace({ options }, "Starting download with options");
   const headers = createFanboxRequestHeaders({
     cookie: options.cookie,
     userAgent: options.userAgent,
   });
-  const transport = new RequestWorker({
-    concurrency: options.concurrency,
-    intervalMs: options.requestIntervalMs,
-    maxRetries: options.maxRetries,
-    rateLimitPauseMs: options.rateLimitPauseMs,
-    transport: customTransport,
-  });
+  logger.trace({ headers }, "Initialized request headers");
+  const transport = new RequestWorker(
+    { logger },
+    {
+      concurrency: options.concurrency,
+      intervalMs: options.requestIntervalMs,
+      maxRetries: options.maxRetries,
+      rateLimitPauseMs: options.rateLimitPauseMs,
+      transport: customTransport,
+    },
+  );
   const pathManager = new PathManager({
     flatPosts: options.flatPosts,
     rootPath: options.output,
@@ -35,8 +43,9 @@ export async function download(
   const client = new FanboxClient({ headers, transport });
 
   let failed = false;
-  const creatorIds = await resolveCreatorIds({ client }, options);
+  const creatorIds = await resolveCreatorIds({ client, logger }, options);
   const creatorManifestManager = new CreatorManifestManager({
+    logger,
     pathManager,
   });
 
@@ -46,11 +55,14 @@ export async function download(
     await syncCreator({
       client,
       headers,
+      logger,
       manifest: creatorManifest,
       pathManager,
       transport,
     }).catch(() => {
-      // TODO: log
+      logger.error(
+        `Error occurred while syncing creator ${creatorId}, skipping.`,
+      );
       failed = true;
     });
 
