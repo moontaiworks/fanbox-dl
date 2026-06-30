@@ -51,7 +51,7 @@ export async function resolveCreatorIds(
   }
 
   const result = [...creatorIds];
-  logger.debug(
+  logger.info(
     { creatorIds: result },
     `Resolved total ${result.length} creator IDs`,
   );

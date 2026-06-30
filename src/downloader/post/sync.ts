@@ -36,7 +36,7 @@ export async function syncPost(
 ): Promise<PostManifestData> {
   if (postSummary.isRestricted) {
     // Not available for download, skip
-    logger.warn(`Post ${postSummary.id} is restricted, skipping download.`);
+    logger.debug(`Post ${postSummary.id} is restricted, skipping download.`);
     return {
       assets: {},
       id: postSummary.id,
@@ -56,7 +56,7 @@ export async function syncPost(
   }
 
   // need to download or update the local copy of the post
-  logger.debug(
+  logger.info(
     `Downloading post ${postSummary.id} updated at ${postSummary.updatedDatetime}: ${postSummary.title}`,
   );
   const post = await client.getPost({ postId: postSummary.id });

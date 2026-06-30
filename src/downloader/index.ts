@@ -20,12 +20,12 @@ export async function download(
   { logger, transport: customTransport }: RunCliDependencies,
   options: DownloadOptions,
 ) {
-  logger.trace({ options }, "Starting download with options");
+  logger.debug({ options }, "Starting download with options");
   const headers = createFanboxRequestHeaders({
     cookie: options.cookie,
     userAgent: options.userAgent,
   });
-  logger.trace({ headers }, "Initialized request headers");
+  logger.debug({ headers }, "Initialized request headers");
   const transport = new RequestWorker(
     { logger },
     {

@@ -28,13 +28,13 @@ export async function syncCreator({
     { client, logger },
     { creatorId: manifest.creatorId },
   );
-  logger.debug(
+  logger.info(
     `Discovered total ${postSummaries.length} posts for creator ${manifest.creatorId}`,
   );
 
   let index = 0;
   for (const postSummary of postSummaries) {
-    logger.debug(
+    logger.info(
       `Syncing ${++index}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
     );
     const postPathManager = pathManager.post(postSummary);
