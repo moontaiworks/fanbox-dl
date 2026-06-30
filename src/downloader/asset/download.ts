@@ -58,16 +58,17 @@ export async function downloadAsset(
   await mkdir(path.dirname(destination), { recursive: true });
   const tempFilePath = destination + ".part";
 
+  const currentHeaders = { ...headers };
   const { size: downloadedBytes } = await filesize(tempFilePath);
   if (downloadedBytes > 0) {
     logger.debug(
       `Resuming download of ${mediaContent.type} asset ${mediaContent.id} to ${tempFilePath} from byte ${downloadedBytes}`,
     );
-    headers.Range = `bytes=${downloadedBytes}-`;
+    currentHeaders.Range = `bytes=${downloadedBytes}-`;
   }
 
   const response = await transport.fetch(
-    new Request(mediaContent.url, { headers }),
+    new Request(mediaContent.url, { headers: currentHeaders }),
   );
   if (!response.ok) {
     throw new AssetDownloadError(
