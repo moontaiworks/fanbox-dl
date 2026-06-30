@@ -9,6 +9,9 @@ export function createFanboxRequestHeaders(
   const headers: Record<string, string> = {
     Origin: "https://www.fanbox.cc",
     Referer: "https://www.fanbox.cc/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
     "User-Agent": options.userAgent ?? createRandomUserAgent(),
   };
   if (options.cookie !== undefined) {
