@@ -1,3 +1,10 @@
+## [1.3.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.2...v1.3.0) (2026-06-30)
+
+### Features
+
+* little speed up by not waiting for whole post done ([5380dad](https://github.com/moontaiworks/fanbox-dl/commit/5380dade1167e7b280e0daf3d840b927a52d1be1))
+* skip download asset if exists ([94bd246](https://github.com/moontaiworks/fanbox-dl/commit/94bd246e6211b0bc8fc1c5eeea532e78ad7c4cc1))
+
 ## [1.2.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.1...v1.2.2) (2026-06-30)
 
 ### Bug Fixes
