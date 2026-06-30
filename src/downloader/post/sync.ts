@@ -71,11 +71,14 @@ export async function syncPost(
     transport,
   });
 
+  const totalDigits = contents.length.toString().length;
   const results = await Promise.allSettled(
     contents.map(async (content, index) => {
+      const indexPadded = index.toString().padStart(totalDigits, "0");
+
       if (content instanceof ImageContent) {
         const destination = pathManager.asset(
-          index,
+          indexPadded,
           content.id,
           content.extension,
         );
@@ -115,7 +118,7 @@ export async function syncPost(
 
       if (content instanceof FileContent) {
         const destination = pathManager.asset(
-          index,
+          indexPadded,
           `${content.name}-${content.id}`,
           content.extension,
         );
@@ -174,7 +177,7 @@ export async function syncPost(
   });
 
   await writeFile(
-    pathManager.asset(0, "content", "md"),
+    pathManager.asset("0".padStart(totalDigits, "0"), "content", "md"),
     markdownContent.join("\n\n"),
   );
 

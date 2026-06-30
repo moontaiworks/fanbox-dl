@@ -18,7 +18,7 @@ export class PathManager {
     this.name = basename(this.path);
   }
 
-  asset(index: number, name: string, extension: string) {
+  asset(index: string, name: string, extension: string) {
     const fileName = `${index}-${name}.${extension}`;
 
     if (this.#flatPosts) {
