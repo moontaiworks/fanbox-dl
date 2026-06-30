@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, stat, utimes } from "node:fs/promises";
+import { mkdir, rename, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
 import type { Logger } from "pino";
 
 import type { HttpTransport } from "../../transport/http2.js";
+import { exists, filesize } from "../fs/filesystem.js";
 import type { MediaContent } from "../post/content.js";
 
 interface DownloadAssetDeps {
@@ -41,6 +42,16 @@ export async function downloadAsset(
   { headers = {}, logger, transport }: DownloadAssetDeps,
   { destination, fallbackDateTime, mediaContent }: DownloadAssetOptions,
 ) {
+  if (await exists(destination)) {
+    logger.debug(`Asset ${mediaContent.id} already exists at ${destination}`);
+    const [{ size: bytes }, sha256] = await Promise.all([
+      filesize(destination),
+      hashFile(destination),
+    ]);
+
+    return { bytes, sha256 };
+  }
+
   logger.debug(
     `Downloading ${mediaContent.type} asset ${mediaContent.id} to ${destination}`,
   );
@@ -68,17 +79,13 @@ export async function downloadAsset(
   await utimes(tempFilePath, timestamp, timestamp);
 
   const [{ size: bytes }, sha256] = await Promise.all([
-    stat(tempFilePath),
+    filesize(tempFilePath),
     hashFile(tempFilePath),
   ]);
 
   await rename(tempFilePath, destination);
 
   return { bytes, sha256 };
-}
-
-async function filesize(path: string) {
-  return stat(path).catch(() => ({ size: 0 }));
 }
 
 async function hashFile(filePath: string): Promise<string> {
