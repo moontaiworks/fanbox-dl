@@ -95,7 +95,7 @@ export class RequestWorker {
       intervalMs = 500,
       maxRetries = 3,
       rateLimitPauseMs,
-      transport = new Http2Transport({ logger }),
+      transport = new Http2Transport(),
     }: RequestQueueOptions = {},
   ) {
     this.#logger = logger;

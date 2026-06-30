@@ -1,5 +1,3 @@
-import type { Logger } from "pino";
-
 import { Http2SessionManager } from "./http2-session.js";
 
 const HTTP2_HEADER_STATUS = ":status";
@@ -16,19 +14,11 @@ export class Http2Error extends Error {
 }
 
 export class Http2Transport {
-  #logger?: Logger;
   readonly #pool = new Http2SessionManager();
-  constructor({ logger }: { logger?: Logger } = {}) {
-    this.#logger = logger;
-  }
 
   fetch(input: Request | string | URL) {
     const request = input instanceof Request ? input : new Request(input);
     const headers = attachHttp2Headers(request);
-    this.#logger?.trace(
-      { headers },
-      `Fetching request to ${request.url} with HTTP/2 transport.`,
-    );
 
     const session = this.#pool.getSession(request.url);
     const stream = session.request(headers, { endStream: !request.body });
