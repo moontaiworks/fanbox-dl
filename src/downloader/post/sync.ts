@@ -3,7 +3,6 @@ import { extname } from "node:path";
 
 import type { Logger } from "pino";
 
-import type { FanboxClient } from "../../client/client.js";
 import type { Post, PostSummary } from "../../client/types.js";
 import type { HttpTransport } from "../../transport/http2.js";
 import { downloadAsset } from "../asset/download.js";
@@ -21,19 +20,22 @@ import {
 import { FileContent, ImageContent, TextContent } from "./content.js";
 import { formatPostContents } from "./contents.js";
 
-interface SyncPostDeps {
-  client: FanboxClient;
-  headers?: Record<string, string>;
+interface PreSyncPostCheckDeps {
   logger: Logger;
   manifest: CreatorManifest;
+}
+
+interface SyncPostDeps {
+  headers?: Record<string, string>;
+  logger: Logger;
   pathManager: PathManager;
   transport: HttpTransport;
 }
 
-export async function syncPost(
-  { client, headers, logger, manifest, pathManager, transport }: SyncPostDeps,
+export function preSyncPostCheck(
+  { logger, manifest }: PreSyncPostCheckDeps,
   postSummary: PostSummary,
-): Promise<PostManifestData> {
+): PostManifestData {
   if (postSummary.isRestricted) {
     // Not available for download, skip
     logger.debug(`Post ${postSummary.id} is restricted, skipping download.`);
@@ -55,11 +57,22 @@ export async function syncPost(
     return existingPost;
   }
 
-  // need to download or update the local copy of the post
+  return {
+    assets: {},
+    id: postSummary.id,
+    restricted: false,
+    status: "pending",
+    updatedDatetime: postSummary.updatedDatetime,
+  };
+}
+
+export async function syncPost(
+  { headers, logger, pathManager, transport }: SyncPostDeps,
+  post: Post,
+): Promise<PostManifestData> {
   logger.info(
-    `Downloading post ${postSummary.id} updated at ${postSummary.updatedDatetime}: ${postSummary.title}`,
+    `Downloading post ${post.id} updated at ${post.updatedDatetime} of creator ${post.creatorId}: ${post.title}`,
   );
-  const post = await client.getPost({ postId: postSummary.id });
   const contents = formatPostContents({ logger }, post);
   if (post.coverImageUrl) contents.unshift(formatCoverImage(post));
 

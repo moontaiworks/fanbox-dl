@@ -4,7 +4,7 @@ import type { FanboxClient } from "../../client/client.js";
 import type { HttpTransport } from "../../transport/http2.js";
 import type { PathManager } from "../fs/path-manager.js";
 import type { CreatorManifest, PostManifestData } from "../manifest/creator.js";
-import { syncPost } from "../post/sync.js";
+import { preSyncPostCheck, syncPost } from "../post/sync.js";
 import { discoverCreatorPosts } from "./discover-posts.js";
 
 interface SyncCreatorDeps {
@@ -32,36 +32,50 @@ export async function syncCreator({
     `Discovered total ${postSummaries.length} posts for creator ${manifest.creatorId}`,
   );
 
+  const processingPosts: Promise<void>[] = [];
+
   let index = 0;
   for (const postSummary of postSummaries) {
-    logger.info(
-      `Syncing ${++index}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
+    logger.debug(
+      `Initializing ${++index}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
     );
+    const preCheckResult = preSyncPostCheck({ logger, manifest }, postSummary);
+    if (preCheckResult.status !== "pending") {
+      manifest.posts[postSummary.id] = preCheckResult;
+      continue;
+    }
+
+    // if we should download, start it but not await it yet, so we can do
+    // multiple downloads in parallel.
+
     const postPathManager = pathManager.post(postSummary);
-    manifest.posts[postSummary.id] = await syncPost(
-      {
-        client,
-        headers,
-        logger,
-        manifest,
-        pathManager: postPathManager,
-        transport,
-      },
-      postSummary,
-    ).catch((err: unknown): PostManifestData => {
-      const manifest = {
-        assets: {},
-        error: String(err),
-        id: postSummary.id,
-        restricted: postSummary.isRestricted,
-        status: "failed",
-        updatedDatetime: postSummary.updatedDatetime,
-      } satisfies PostManifestData;
-      logger.error(
-        { err },
-        `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
-      );
-      return manifest;
-    });
+    const post = await client.getPost({ postId: postSummary.id });
+    const syncPostPromise = syncPost(
+      { headers, logger, pathManager: postPathManager, transport },
+      post,
+    )
+      .then(async (result) => {
+        manifest.posts[postSummary.id] = result;
+        return manifest.save();
+      })
+      .catch((err: unknown) => {
+        manifest.posts[postSummary.id] = {
+          assets: {},
+          error: String(err),
+          id: postSummary.id,
+          restricted: postSummary.isRestricted,
+          status: "failed",
+          updatedDatetime: postSummary.updatedDatetime,
+        } satisfies PostManifestData;
+        logger.error(
+          { err },
+          `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+        );
+        return manifest.save();
+      });
+
+    processingPosts.push(syncPostPromise);
   }
+
+  await Promise.all(processingPosts);
 }
