@@ -49,7 +49,25 @@ export async function syncCreator({
     // multiple downloads in parallel.
 
     const postPathManager = pathManager.post(postSummary);
-    const post = await client.getPost({ postId: postSummary.id });
+    const post = await client
+      .getPost({ postId: postSummary.id })
+      .catch(async (err: unknown) => {
+        manifest.posts[postSummary.id] = {
+          assets: {},
+          error: String(err),
+          id: postSummary.id,
+          restricted: postSummary.isRestricted,
+          status: "failed",
+          updatedDatetime: postSummary.updatedDatetime,
+        } satisfies PostManifestData;
+        logger.error(
+          { err },
+          `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+        );
+        await manifest.save();
+      });
+    if (!post) continue;
+
     const syncPostPromise = syncPost(
       { headers, logger, pathManager: postPathManager, transport },
       post,
