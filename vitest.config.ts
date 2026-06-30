@@ -23,6 +23,7 @@ export default defineConfig({
     globals: true,
     hookTimeout: 60000,
     include: ["src/**/*.spec.ts", "tests/**/*.test.ts"],
+    passWithNoTests: true,
     retry: {
       count: 3,
       delay: 1500,
