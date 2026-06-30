@@ -1,3 +1,16 @@
+## [1.2.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.1.0...v1.2.0) (2026-06-30)
+
+### Features
+
+* add more headers ([8b084a4](https://github.com/moontaiworks/fanbox-dl/commit/8b084a44b423adada7cc52d54496e985312cd86a))
+* log for http transport ([bb2e365](https://github.com/moontaiworks/fanbox-dl/commit/bb2e365ab6accca5a9e3c066947a5fa8c4e50fb8))
+
+### Bug Fixes
+
+* add sub dir for creator ([b2dfcec](https://github.com/moontaiworks/fanbox-dl/commit/b2dfcec227c0d6a93d4e8b282cfafe4b02ad5193))
+* ignore to using an os temp file ([b24c733](https://github.com/moontaiworks/fanbox-dl/commit/b24c733e51aa389215dafab858d5f91715813f9b))
+* parse body if not json ([c5c989a](https://github.com/moontaiworks/fanbox-dl/commit/c5c989a4bf099f49ccde3679b7c49019d08df773))
+
 ## [1.1.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.0.1...v1.1.0) (2026-06-30)
 
 ### Features
