@@ -1,3 +1,9 @@
+## [1.3.4](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.3...v1.3.4) (2026-06-30)
+
+### Bug Fixes
+
+* prevent interaction on headers between requests ([57b59ee](https://github.com/moontaiworks/fanbox-dl/commit/57b59ee2938bdf46c8c6a17f2065b481a7dabb78))
+
 ## [1.3.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.2...v1.3.3) (2026-06-30)
 
 ### Bug Fixes
