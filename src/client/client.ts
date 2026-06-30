@@ -68,12 +68,20 @@ export class FanboxClient {
 
     const request = new Request(url, { headers: this.#headers });
     const response = await this.#transport.fetch(request);
-    const body = await response.json();
+    const body = await parseJSONBody<FanboxEnvelope<T>>(response);
     if (!response.ok) {
-      // TODO: log
       throw new FanboxApiError(response, body);
     }
 
-    return (body as FanboxEnvelope<T>).body;
+    return body.body;
+  }
+}
+
+async function parseJSONBody<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as unknown as T;
   }
 }
