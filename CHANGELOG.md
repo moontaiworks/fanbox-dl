@@ -1,3 +1,28 @@
+## [1.1.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.0.1...v1.1.0) (2026-06-30)
+
+### Features
+
+* add logs ([9f2f609](https://github.com/moontaiworks/fanbox-dl/commit/9f2f609e7fb54f91cd6bf2a6db394c1c845d832f))
+* add path-manager ([ce45131](https://github.com/moontaiworks/fanbox-dl/commit/ce45131ed83e0241b4c255689ba2c3864a6fe90a))
+* asset downloader ([8cc367a](https://github.com/moontaiworks/fanbox-dl/commit/8cc367a940064ed77217c73dd14ce791d647a2c8))
+* connect asset download ([e40ad35](https://github.com/moontaiworks/fanbox-dl/commit/e40ad35b4dd2904e26a2e5cf618bf793683e6286))
+* discover creator posts ([d8307ca](https://github.com/moontaiworks/fanbox-dl/commit/d8307cabb7a1e1b1e1bae4338c69f5f9398ad908))
+* implement abstract sync logics ([0d42366](https://github.com/moontaiworks/fanbox-dl/commit/0d42366080d38576f5bc5fd3b2647628f57cb114))
+* log resolved creator ids ([24f3746](https://github.com/moontaiworks/fanbox-dl/commit/24f374678b52e9e347e6c26beed6cabc4e5e69cd))
+* post content transformer ([2fa14c3](https://github.com/moontaiworks/fanbox-dl/commit/2fa14c374f071b51984b57a6381d7adae3f09bac))
+* provide a log feature but able to log different by level ([e9dfceb](https://github.com/moontaiworks/fanbox-dl/commit/e9dfcebb5998d20510d0d2b6fecafe6293874048))
+* set default request interval to 500ms ([654bb90](https://github.com/moontaiworks/fanbox-dl/commit/654bb90aa468f58c53e64e225eebb15b3217966f))
+* skip save if there are no any downloaded assets ([1c0761d](https://github.com/moontaiworks/fanbox-dl/commit/1c0761d11c5beb6f455323b49bbe36300192947f))
+* sync a creator ([318f6a9](https://github.com/moontaiworks/fanbox-dl/commit/318f6a9677d35bad113a568f4d5baae6a17a2f7b))
+
+### Bug Fixes
+
+* adjust request init logic to prevent reuse same request object ([a3106a3](https://github.com/moontaiworks/fanbox-dl/commit/a3106a33a8db6e6e9aebb098d1e4cf90ddc780f4))
+* generic type for json() response helper ([9c70499](https://github.com/moontaiworks/fanbox-dl/commit/9c70499aa11016d14359d7f8a3ebbeb916764739))
+* guard command ([260cecb](https://github.com/moontaiworks/fanbox-dl/commit/260cecb3e59394c895edef6151d8d9eb261f71d0))
+* remove obsolete cli options ([05c6c9e](https://github.com/moontaiworks/fanbox-dl/commit/05c6c9eef7ad9c4e43c41be3709a26314d9ef877))
+* use pure implement for http header ([f001f37](https://github.com/moontaiworks/fanbox-dl/commit/f001f370723953f72c9df0700552df6d6e8f060d))
+
 ## [1.0.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.0.0...v1.0.1) (2026-06-04)
 
 ### Bug Fixes
