@@ -154,8 +154,9 @@ export class RequestWorker {
     }
 
     if (retryRemains <= 0) {
+      const url = request instanceof Request ? request.url : request.toString();
       this.#logger.error(
-        `Request failed with ${response.status} ${response.statusText} after maximum retries.`,
+        `Request to ${url} failed with ${response.status} ${response.statusText} after maximum retries.`,
       );
       return response;
     }

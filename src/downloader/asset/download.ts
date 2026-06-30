@@ -59,7 +59,12 @@ export async function downloadAsset(
   const tempFilePath = destination + ".part";
 
   const { size: downloadedBytes } = await filesize(tempFilePath);
-  if (downloadedBytes > 0) headers.Range = `bytes=${downloadedBytes}-`;
+  if (downloadedBytes > 0) {
+    logger.debug(
+      `Resuming download of ${mediaContent.type} asset ${mediaContent.id} to ${tempFilePath} from byte ${downloadedBytes}`,
+    );
+    headers.Range = `bytes=${downloadedBytes}-`;
+  }
 
   const response = await transport.fetch(
     new Request(mediaContent.url, { headers }),
