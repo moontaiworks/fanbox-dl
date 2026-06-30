@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.0...v1.3.1) (2026-06-30)
+
+### Bug Fixes
+
+* resolve race condition on same manifest ([a1ae423](https://github.com/moontaiworks/fanbox-dl/commit/a1ae423ac64dd15f5a5bdd1aa55ac3a33ae1dfdc))
+
 ## [1.3.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.2...v1.3.0) (2026-06-30)
 
 ### Features
