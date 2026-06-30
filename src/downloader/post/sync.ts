@@ -68,7 +68,6 @@ export async function syncPost(
   const download = downloadAsset.bind(undefined, {
     headers,
     logger,
-    pathManager,
     transport,
   });
 

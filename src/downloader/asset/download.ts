@@ -1,19 +1,17 @@
 import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import fs, { mkdir, rename, stat, utimes } from "node:fs/promises";
+import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
 import type { Logger } from "pino";
 
 import type { HttpTransport } from "../../transport/http2.js";
-import type { PathManager } from "../fs/path-manager.js";
 import type { MediaContent } from "../post/content.js";
 
 interface DownloadAssetDeps {
   headers?: Record<string, string>;
   logger: Logger;
-  pathManager: PathManager;
   transport: HttpTransport;
 }
 
@@ -40,17 +38,14 @@ class AssetDownloadError extends Error {
 }
 
 export async function downloadAsset(
-  { headers = {}, logger, pathManager, transport }: DownloadAssetDeps,
+  { headers = {}, logger, transport }: DownloadAssetDeps,
   { destination, fallbackDateTime, mediaContent }: DownloadAssetOptions,
 ) {
   logger.debug(
     `Downloading ${mediaContent.type} asset ${mediaContent.id} to ${destination}`,
   );
-  const tempDir = await fs.mkdtempDisposable(pathManager.name, {
-    encoding: "utf-8",
-  });
-  const filename = `${mediaContent.id}.${mediaContent.extension}`;
-  const tempFilePath = path.resolve(tempDir.path, filename);
+  await mkdir(path.dirname(destination), { recursive: true });
+  const tempFilePath = destination + ".part";
 
   const { size: downloadedBytes } = await filesize(tempFilePath);
   if (downloadedBytes > 0) headers.Range = `bytes=${downloadedBytes}-`;
@@ -77,7 +72,6 @@ export async function downloadAsset(
     hashFile(tempFilePath),
   ]);
 
-  await mkdir(path.dirname(destination), { recursive: true });
   await rename(tempFilePath, destination);
 
   return { bytes, sha256 };
