@@ -62,7 +62,7 @@ export async function syncCreator({
         } satisfies PostManifestData;
         logger.error(
           { err },
-          `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+          `Error occurred while fetch post manifest of ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
         );
         await manifest.save();
       });
