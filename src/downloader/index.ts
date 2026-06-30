@@ -51,13 +51,14 @@ export async function download(
 
   for (const creatorId of creatorIds) {
     const creatorManifest = await creatorManifestManager.load(creatorId);
+    const creatorPathManager = pathManager.dir(creatorId);
 
     await syncCreator({
       client,
       headers,
       logger,
       manifest: creatorManifest,
-      pathManager,
+      pathManager: creatorPathManager,
       transport,
     }).catch(() => {
       logger.error(
