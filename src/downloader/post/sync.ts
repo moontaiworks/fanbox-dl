@@ -110,10 +110,7 @@ export async function syncPost(
           url: content.url,
         };
 
-        return formatImageAsset({
-          assetPath: pathManager.path,
-          contentPath: destination,
-        });
+        return formatImageAsset({ assetPath: destination });
       }
 
       if (content instanceof FileContent) {
@@ -150,10 +147,7 @@ export async function syncPost(
           url: content.url,
         };
 
-        return formatFileAsset({
-          assetPath: pathManager.path,
-          contentPath: destination,
-        });
+        return formatFileAsset({ assetPath: destination });
       }
 
       if (content instanceof TextContent) {
