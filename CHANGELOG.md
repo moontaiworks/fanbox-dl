@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.2...v1.3.3) (2026-06-30)
+
+### Bug Fixes
+
+* handle possible failure on fetch post content ([baec53f](https://github.com/moontaiworks/fanbox-dl/commit/baec53f6661e3d64246384b28859161c636b79f6))
+
 ## [1.3.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.1...v1.3.2) (2026-06-30)
 
 ## [1.3.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.0...v1.3.1) (2026-06-30)
