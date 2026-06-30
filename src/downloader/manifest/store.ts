@@ -25,7 +25,8 @@ export class FileSystemStore<T> implements Store<T> {
   async save(path: string, data: T): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
 
-    const tempPath = `${path}.tmp`;
+    const randomSuffix = Math.floor(Math.random() * 1000000);
+    const tempPath = `${path}.tmp.${randomSuffix}`;
     const content = `${JSON.stringify(data, null, 2)}\n`;
 
     await writeFile(tempPath, content, "utf8");
