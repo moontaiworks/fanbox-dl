@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.1...v1.2.2) (2026-06-30)
+
+### Bug Fixes
+
+* wrong markdown filepath ([a909fec](https://github.com/moontaiworks/fanbox-dl/commit/a909fecb253fef026f137ea9495d695671341cb9))
+
 ## [1.2.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.0...v1.2.1) (2026-06-30)
 
 ### Bug Fixes
