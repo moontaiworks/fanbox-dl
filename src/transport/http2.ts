@@ -18,13 +18,10 @@ export class Http2Transport {
 
   fetch(input: Request | string | URL) {
     const request = input instanceof Request ? input : new Request(input);
-    attachHttp2Headers(request);
+    const headers = attachHttp2Headers(request);
 
     const session = this.#pool.getSession(request.url);
-    const stream = session.request(
-      { ...Object.fromEntries(request.headers) },
-      { endStream: !request.body },
-    );
+    const stream = session.request(headers, { endStream: !request.body });
 
     return new Promise<Response>((resolve, reject) => {
       let settled = false;
@@ -53,12 +50,14 @@ export class Http2Transport {
 
 function attachHttp2Headers(request: Request) {
   const url = new URL(request.url);
-  const headers = request.headers;
+  const headers = { ...Object.fromEntries(request.headers) };
 
-  headers.set(":authority", url.host);
-  headers.set(":method", request.method.toUpperCase());
-  headers.set(":path", `${url.pathname}${url.search}`);
-  headers.set(":scheme", url.protocol.slice(0, -1));
+  headers[":authority"] = url.host;
+  headers[":method"] = request.method.toUpperCase();
+  headers[":path"] = `${url.pathname}${url.search}`;
+  headers[":scheme"] = url.protocol.slice(0, -1);
+
+  return headers;
 }
 
 function createResponseHeaders(
