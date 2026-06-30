@@ -28,7 +28,7 @@ Download:
   --flat-posts              Store post files directly under each creator.
 
 Requests:
-  --concurrency <n>         Concurrent requests. Default: 5.
+  --concurrency <n>         Concurrent requests. Default: 10.
   --request-interval-ms <n> Delay between request starts. Default: 500.
   --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
   --max-retries <n>         Retry attempts. Default: 3.
@@ -126,7 +126,7 @@ function parseDownloadArgs(args: string[]) {
       allowPositionals: false,
       args,
       options: {
-        concurrency: { default: "5", type: "string" },
+        concurrency: { default: "10", type: "string" },
         cookie: { type: "string" },
         "cookie-file": { type: "string" },
         creator: { multiple: true, type: "string" },
