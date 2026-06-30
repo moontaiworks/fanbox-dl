@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.2.0...v1.2.1) (2026-06-30)
+
+### Bug Fixes
+
+* pad file index to proper digits ([1dabdad](https://github.com/moontaiworks/fanbox-dl/commit/1dabdadb34a5600e3b628ad47c549397f098053a))
+
 ## [1.2.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.1.0...v1.2.0) (2026-06-30)
 
 ### Features
