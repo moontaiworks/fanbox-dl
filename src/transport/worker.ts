@@ -43,10 +43,6 @@ class ConcurrentLimiter {
 
   canAcquire() {
     if (this.#activeRequests < this.concurrency) return true;
-
-    this.#logger.trace(
-      `Concurrency limit reached (${this.#activeRequests}/${this.concurrency}), dropping new concurrent request.`,
-    );
     return false;
   }
 
@@ -188,9 +184,6 @@ export class RequestWorker {
     if (waitMs > 0) {
       this.#concurrentLimiter.release();
       this.#schedulePump(waitMs);
-      this.#logger.trace(
-        `Waiting for request scheduler for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
-      );
       return;
     }
 
@@ -215,9 +208,6 @@ export class RequestWorker {
   }
 
   #schedulePump(waitMs: number) {
-    this.#logger.trace(
-      `Scheduled pump for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
-    );
     setTimeout(() => {
       this.#pump();
     }, waitMs);
