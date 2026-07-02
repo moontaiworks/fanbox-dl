@@ -43,7 +43,7 @@ export async function download(
   });
   const client = new FanboxClient({ headers, transport });
 
-  let failed = false;
+  const failed: string[] = [];
   const creatorIds = await resolveCreatorIds({ client, logger }, options);
   const creatorManifestManager = new CreatorManifestManager({
     logger,
@@ -68,12 +68,12 @@ export async function download(
       logger.error(
         `Error occurred while syncing creator ${creatorId}, skipping.`,
       );
-      failed = true;
+      failed.push(creatorId);
     });
     processingCreators.push(syncCreatorPromise);
 
     const success = !hasFailures(creatorManifest);
-    failed ||= !success;
+    if (!success) failed.push(creatorId);
   }
 
   logger.info(
@@ -82,6 +82,11 @@ export async function download(
 
   await Promise.all(processingCreators);
   await creatorManifestManager.saveAll();
+
+  logger.info(
+    { failed },
+    `Download completed for ${creatorIds.length} creators, with ${failed.length} failures.`,
+  );
 
   return failed;
 }
