@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.0...v1.5.1) (2026-07-02)
+
+### Bug Fixes
+
+* remove block of one scheduledPump instance ([cfc358c](https://github.com/moontaiworks/fanbox-dl/commit/cfc358c1825cb73a748a2b3e1a6efba4360c5186))
+
 ## [1.5.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.3...v1.5.0) (2026-07-02)
 
 ### Features
