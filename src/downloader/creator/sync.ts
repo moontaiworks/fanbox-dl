@@ -95,5 +95,9 @@ export async function syncCreator({
     processingPosts.push(syncPostPromise);
   }
 
+  logger.info(
+    `All ${processingPosts.length} posts of creator ${manifest.creatorId} have been initialized for download, waiting for all to complete...`,
+  );
+
   await Promise.all(processingPosts);
 }
