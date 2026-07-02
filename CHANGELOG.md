@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.3...v1.5.4) (2026-07-02)
+
+### Bug Fixes
+
+* adjust http2-session-multiplier to option instead of a fix value ([7532972](https://github.com/moontaiworks/fanbox-dl/commit/753297292335c1c54c4ae3be8bc4132b9bf5dd61))
+* suppress schedule pump logs ([4b1ad3d](https://github.com/moontaiworks/fanbox-dl/commit/4b1ad3dbef2a3cf9ddafceaf5ddd3b12f8237cd1))
+
 ## [1.5.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.2...v1.5.3) (2026-07-02)
 
 ### Bug Fixes
