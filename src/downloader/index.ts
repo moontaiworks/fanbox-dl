@@ -38,7 +38,9 @@ export async function download(
     },
   );
   const pathManager = new PathManager({
+    flatParentMinBytes: options.flatParentMinBytes,
     flatPosts: options.flatPosts,
+    maxFilenameBytes: options.maxFilenameBytes,
     rootPath: options.output,
   });
   const client = new FanboxClient({ headers, transport });

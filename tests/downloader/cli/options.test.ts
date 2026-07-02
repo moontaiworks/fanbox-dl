@@ -20,6 +20,46 @@ describe("parseDownloadOptions", () => {
 
     expect(options.http2SessionMultiplier).toBe(3);
   });
+
+  it("defaults max filename bytes to 250", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+    ]);
+
+    expect(options.maxFilenameBytes).toBe(250);
+  });
+
+  it("defaults flat parent min bytes to 3", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+    ]);
+
+    expect(options.flatParentMinBytes).toBe(3);
+  });
+
+  it("parses the configured max filename bytes", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+      "--max-filename-bytes",
+      "200",
+    ]);
+
+    expect(options.maxFilenameBytes).toBe(200);
+  });
+
+  it("parses the configured flat parent min bytes", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+      "--flat-parent-min-bytes",
+      "35",
+    ]);
+
+    expect(options.flatParentMinBytes).toBe(35);
+  });
 });
 
 const silentLogger = {

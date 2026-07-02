@@ -26,6 +26,9 @@ Auth:
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
   --flat-posts              Store post files directly under each creator.
+  --max-filename-bytes <n>  Max filename bytes including .part temp suffix. Default: 256.
+  --flat-parent-min-bytes <n>
+                            Min parent/post name bytes to preserve in flat-posts filenames. Default: 3.
 
 Requests:
   --concurrency <n>         Concurrent requests. Default: 10.
@@ -44,10 +47,12 @@ export interface DownloadOptions {
   concurrency: number;
   cookie?: string;
   creatorIds: string[];
+  flatParentMinBytes: number;
   flatPosts: boolean;
   following: boolean;
   http2SessionMultiplier: number;
   ignoreCreatorIds: string[];
+  maxFilenameBytes: number;
   maxRetries: number;
   output: string;
   rateLimitPauseMs?: number;
@@ -76,6 +81,10 @@ export function parseDownloadOptions(
     concurrency: parsePositiveInteger("concurrency", values.concurrency),
     cookie,
     creatorIds,
+    flatParentMinBytes: parsePositiveInteger(
+      "flat-parent-min-bytes",
+      values["flat-parent-min-bytes"],
+    ),
     flatPosts: values["flat-posts"],
     following: values.following,
     http2SessionMultiplier: parsePositiveInteger(
@@ -83,6 +92,10 @@ export function parseDownloadOptions(
       values["http2-session-multiplier"],
     ),
     ignoreCreatorIds: values["ignore-creator"] ?? [],
+    maxFilenameBytes: parsePositiveInteger(
+      "max-filename-bytes",
+      values["max-filename-bytes"],
+    ),
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
     rateLimitPauseMs: values["rate-limit-pause-ms"]
@@ -138,11 +151,13 @@ function parseDownloadArgs(args: string[]) {
         "cookie-file": { type: "string" },
         creator: { multiple: true, type: "string" },
         "dry-run": { default: false, type: "boolean" },
+        "flat-parent-min-bytes": { default: "35", type: "string" },
         "flat-posts": { default: false, type: "boolean" },
         following: { default: false, type: "boolean" },
         "http2-session-multiplier": { default: "10", type: "string" },
         "ignore-creator": { multiple: true, type: "string" },
         "log-level": { default: "info", type: "string" },
+        "max-filename-bytes": { default: "256", type: "string" },
         "max-retries": { default: "3", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
         "rate-limit-pause-ms": { type: "string" },
