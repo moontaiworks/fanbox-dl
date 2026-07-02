@@ -132,4 +132,34 @@ describe("PathManager", () => {
     expect(Buffer.byteLength(basename(tempPath))).toBeLessThanOrEqual(255);
     await expect(writeFile(tempPath, "ok")).resolves.toBeUndefined();
   });
+
+  it("applies flat parent min bytes to optional parent segments only", async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), "fanbox-dl-path-"));
+    const pathManager = new PathManager({
+      flatParentMinBytes: 35,
+      flatPosts: true,
+      maxFilenameBytes: 200,
+      rootPath,
+    }).dir([
+      { context: "2026-03-05", required: true },
+      { context: "20180801", required: true },
+      { context: "名".repeat(80), required: false },
+    ]);
+    const destination = pathManager.asset(
+      [
+        { context: "000", required: true },
+        { context: "檔".repeat(100), required: false },
+        { context: "asset-id", required: true },
+      ],
+      "png",
+    );
+    const tempPath = `${destination}.part`;
+    console.log(tempPath);
+
+    expect(basename(tempPath)).toBe(
+      `2026-03-05-20180801-${"名".repeat(11)}⋯.000-${"檔".repeat(39)}⋯-asset-id.png.part`,
+    );
+    expect(Buffer.byteLength(basename(tempPath))).toBeLessThanOrEqual(200);
+    await expect(writeFile(tempPath, "ok")).resolves.toBeUndefined();
+  });
 });

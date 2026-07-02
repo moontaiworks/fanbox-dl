@@ -8,7 +8,9 @@ export interface FilenameSegment {
 }
 
 interface PathManagerOptions {
+  flatParentMinBytes?: number;
   flatPosts: boolean;
+  maxFilenameBytes?: number;
   nameSegments?: FilenameSegment[];
   rootPath: string;
 }
@@ -22,12 +24,22 @@ const TRUNCATED_MARKER = "⋯";
 export class PathManager {
   name: string;
   path: string;
+  #flatParentMinBytes: number;
   #flatPosts: boolean;
+  #maxFilenameBytes: number;
   #nameSegments: FilenameSegment[];
 
-  constructor({ flatPosts, nameSegments, rootPath }: PathManagerOptions) {
+  constructor({
+    flatParentMinBytes = Buffer.byteLength(TRUNCATED_MARKER),
+    flatPosts,
+    maxFilenameBytes = DEFAULT_MAX_FILENAME_BYTES,
+    nameSegments,
+    rootPath,
+  }: PathManagerOptions) {
     this.path = resolve(rootPath);
+    this.#flatParentMinBytes = flatParentMinBytes;
     this.#flatPosts = flatPosts;
+    this.#maxFilenameBytes = maxFilenameBytes;
     this.name = basename(this.path);
     this.#nameSegments = nameSegments ?? [
       { context: this.name, required: true },
@@ -40,7 +52,7 @@ export class PathManager {
       required,
     }));
     const maxFinalFilenameBytes =
-      DEFAULT_MAX_FILENAME_BYTES - Buffer.byteLength(TEMP_FILE_SUFFIX);
+      this.#maxFilenameBytes - Buffer.byteLength(TEMP_FILE_SUFFIX);
 
     if (this.#flatPosts) {
       const parent = dirname(this.path);
@@ -49,6 +61,7 @@ export class PathManager {
         sanitizedSegments,
         extension,
         maxFinalFilenameBytes,
+        this.#flatParentMinBytes,
       );
 
       return join(parent, fullname);
@@ -62,10 +75,12 @@ export class PathManager {
 
   dir(segments: FilenameSegment[]) {
     const sanitizedSegments = sanitizeSegments(segments);
-    const name = formatName(sanitizedSegments, DEFAULT_MAX_FILENAME_BYTES);
+    const name = formatName(sanitizedSegments, this.#maxFilenameBytes);
 
     return new PathManager({
+      flatParentMinBytes: this.#flatParentMinBytes,
       flatPosts: this.#flatPosts,
+      maxFilenameBytes: this.#maxFilenameBytes,
       nameSegments: sanitizedSegments,
       rootPath: join(this.path, name),
     });
@@ -101,6 +116,7 @@ function formatFlatAssetFilename(
   segments: FilenameSegment[],
   extension: string,
   maxBytes: number,
+  flatParentMinBytes: number,
 ) {
   const fileName = formatAssetFilename(segments, extension, maxBytes);
   const postName = formatName(postNameSegments, maxBytes);
@@ -110,7 +126,7 @@ function formatFlatAssetFilename(
   const separatorBytes = Buffer.byteLength(".");
   const minimumPostNameBytes = Math.min(
     Buffer.byteLength(postName),
-    minimumSegmentsBytes(postNameSegments),
+    minimumSegmentsBytes(postNameSegments, flatParentMinBytes),
   );
   const fileNameBytes = maxBytes - separatorBytes - minimumPostNameBytes;
   const truncatedFileName = formatAssetFilename(
@@ -148,21 +164,24 @@ function formatSegments(segments: FilenameSegment[], maxBytes: number) {
   });
 }
 
-function minimumSegmentsBytes(segments: FilenameSegment[]) {
+function minimumSegmentsBytes(
+  segments: FilenameSegment[],
+  optionalSegmentBytes: number,
+) {
   if (!segments.length) return 0;
 
   const separatorBytes =
     Math.max(segments.length - 1, 0) * Buffer.byteLength("-");
-  const optionalMarkerBytes = segments.reduce(
+  const optionalBytes = segments.reduce(
     (total, segment) =>
-      segment.required ? total : total + Buffer.byteLength(TRUNCATED_MARKER),
+      segment.required ? total : total + Buffer.byteLength(segment.context),
     0,
   );
 
   return segments.reduce(
     (total, segment) =>
       segment.required ? total + Buffer.byteLength(segment.context) : total,
-    separatorBytes + optionalMarkerBytes,
+    separatorBytes + Math.min(optionalBytes, optionalSegmentBytes),
   );
 }
 
