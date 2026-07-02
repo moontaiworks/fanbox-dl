@@ -75,6 +75,10 @@ export async function download(
     failed ||= !success;
   }
 
+  logger.info(
+    `All ${processingCreators.length} creators have been initialized for download, waiting for all to complete...`,
+  );
+
   await Promise.all(processingCreators);
   await creatorManifestManager.saveAll();
 
