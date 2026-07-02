@@ -10,93 +10,104 @@ export interface RequestQueueOptions {
   transport?: HttpTransport;
 }
 
-class ConcurrencyLimiter {
-  #active = 0;
+interface PendingRequest {
+  reject: (reason?: unknown) => void;
+  request: Request | string | URL;
+  resolve: (response: Response) => void;
+}
+
+class ConcurrentLimiter {
+  get activeRequests() {
+    return this.#activeRequests;
+  }
+
+  #activeRequests = 0;
   #logger: Logger;
-  #queue: (() => void)[] = [];
 
   constructor(
     { logger }: { logger: Logger },
-    private concurrency: number,
+    public readonly concurrency: number,
   ) {
     this.#logger = logger;
-    this.#logger.trace({ concurrency }, "Initialized ConcurrencyLimiter");
+    this.#logger.trace(
+      `Initialized ConcurrentLimiter with max ${concurrency} concurrent requests`,
+    );
   }
 
-  async acquire() {
-    if (this.#active >= this.concurrency) {
-      this.#logger.trace(
-        `Concurrency limit reached (${this.#active}/${this.concurrency}), waiting for release.`,
-      );
-      await new Promise<void>((release) => this.#queue.push(release));
-    }
+  acquire() {
+    if (!this.canAcquire()) return false;
 
-    ++this.#active;
+    this.#activeRequests += 1;
+    return true;
+  }
+
+  canAcquire() {
+    if (this.#activeRequests < this.concurrency) return true;
+
+    this.#logger.trace(
+      `Concurrency limit reached (${this.#activeRequests}/${this.concurrency}), dropping new concurrent request.`,
+    );
+    return false;
   }
 
   release() {
-    --this.#active;
-    if (this.#queue.length > 0) {
-      const next = this.#queue.shift();
-      if (next) {
-        this.#logger.trace(
-          `Concurrency limit released (${this.#active}/${this.concurrency}), processing next request.`,
-        );
-        next();
-      }
-    }
+    this.#activeRequests -= 1;
   }
 }
 
-class TimeLimiter {
-  #availableAt = 0;
+class TimeRateLimiter {
+  get nextAvailableAt() {
+    return this.#nextAvailableAt;
+  }
+
   #logger: Logger;
+  #nextAvailableAt = 0;
 
   constructor(
     { logger }: { logger: Logger },
     private intervalMs: number,
   ) {
     this.#logger = logger;
-    this.#logger.trace(`Initialized TimeLimiter with interval ${intervalMs}ms`);
-  }
-
-  setNextAvailableAt(availableAt: number) {
     this.#logger.trace(
-      `Setting next available time to ${new Date(availableAt).toISOString()}.`,
+      `Initialized TimeRateLimiter with interval ${intervalMs}ms`,
     );
-    this.#availableAt = availableAt;
   }
 
-  async wait() {
-    const now = Date.now();
-    if (this.#availableAt > now) {
-      const waitMs = this.#availableAt - now;
-      this.#logger.trace(
-        `Waiting for time limiter for ${waitMs}ms, until ${new Date(this.#availableAt).toISOString()}.`,
-      );
-      await sleep(waitMs);
-      this.#logger.trace(
-        `Time limiter continued at ${new Date(this.#availableAt).toISOString()}.`,
-      );
-    }
+  postponeUntil(availableAt: number) {
+    this.#nextAvailableAt = Math.max(this.#nextAvailableAt, availableAt);
+    this.#logger.trace(
+      `Setting next available time to ${new Date(this.#nextAvailableAt).toISOString()}.`,
+    );
+  }
 
-    this.setNextAvailableAt(Date.now() + this.intervalMs);
+  reserveNextStart() {
+    this.#nextAvailableAt =
+      Math.max(this.#nextAvailableAt, Date.now()) + this.intervalMs;
+    this.#logger.trace(
+      `Setting next available time to ${new Date(this.#nextAvailableAt).toISOString()}.`,
+    );
+  }
+
+  waitMs() {
+    return this.#nextAvailableAt - Date.now();
   }
 }
 
 export class RequestWorker {
-  #concurrencyLimiter: ConcurrencyLimiter;
+  #concurrentLimiter: ConcurrentLimiter;
   #logger: Logger;
   #maxRetries: number;
+  #pendingRequests: PendingRequest[] = [];
   #rateLimitPauseMs?: number;
-  #timeLimiter: TimeLimiter;
+  #scheduledPump?: ReturnType<typeof setTimeout>;
+  #timeRateLimiter: TimeRateLimiter;
   #transport: HttpTransport;
 
   constructor(
     { logger }: { logger: Logger },
     {
-      concurrency = 5,
-      intervalMs = 500,
+      concurrency = 100,
+      intervalMs = 1000,
       maxRetries = 3,
       rateLimitPauseMs,
       transport = new Http2Transport(),
@@ -104,8 +115,8 @@ export class RequestWorker {
   ) {
     this.#logger = logger;
     this.#transport = transport;
-    this.#concurrencyLimiter = new ConcurrencyLimiter({ logger }, concurrency);
-    this.#timeLimiter = new TimeLimiter({ logger }, intervalMs);
+    this.#concurrentLimiter = new ConcurrentLimiter({ logger }, concurrency);
+    this.#timeRateLimiter = new TimeRateLimiter({ logger }, intervalMs);
     this.#maxRetries = maxRetries;
     this.#rateLimitPauseMs = rateLimitPauseMs;
     logger.trace(
@@ -121,10 +132,12 @@ export class RequestWorker {
   }
 
   async fetch(request: Request | string | URL) {
-    await this.#concurrencyLimiter.acquire();
-
-    return this.#fetch(request).finally(() => {
-      this.#concurrencyLimiter.release();
+    return new Promise<Response>((resolve, reject) => {
+      this.#pendingRequests.push({ reject, request, resolve });
+      this.#logger.trace(
+        `Queued request into ${this.#pendingRequests.length} requests with ${this.#concurrentLimiter.activeRequests}/${this.#concurrentLimiter.concurrency} active requests.`,
+      );
+      this.#pump();
     });
   }
 
@@ -135,7 +148,6 @@ export class RequestWorker {
     this.#logger.info(
       `Fetching request with max ${retryRemains} retries to ${request instanceof Request ? request.url : request.toString()}`,
     );
-    await this.#timeLimiter.wait();
 
     const requestObj =
       request instanceof Request ? request.clone() : new Request(request);
@@ -149,8 +161,8 @@ export class RequestWorker {
       this.#logger.warn(
         `Received 429 Too Many Requests. Pausing requests until ${new Date(availableAt).toISOString()}.`,
       );
+      this.#timeRateLimiter.postponeUntil(availableAt);
       await sleep(retryAfter);
-      this.#timeLimiter.setNextAvailableAt(availableAt);
     }
 
     if (retryRemains <= 0) {
@@ -162,6 +174,56 @@ export class RequestWorker {
     }
 
     return this.#fetch(request, retryRemains - 1);
+  }
+
+  #pump() {
+    if (this.#pendingRequests.length === 0) return;
+    if (!this.#concurrentLimiter.canAcquire()) {
+      this.#logger.trace(
+        `Concurrency limit reached (${this.#concurrentLimiter.activeRequests}/${this.#concurrentLimiter.concurrency}).`,
+      );
+      return;
+    }
+
+    const waitMs = this.#timeRateLimiter.waitMs();
+    if (waitMs > 0) {
+      this.#schedulePump(waitMs);
+      this.#logger.trace(
+        `Waiting for request scheduler for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
+      );
+      return;
+    }
+
+    const next = this.#pendingRequests.shift();
+    if (!next) {
+      this.#logger.trace(`No pending requests to process.`);
+      return;
+    }
+
+    this.#concurrentLimiter.acquire();
+    this.#timeRateLimiter.reserveNextStart();
+    this.#logger.trace(
+      `Processing queued request with ${this.#concurrentLimiter.activeRequests}/${this.#concurrentLimiter.concurrency} active requests and ${this.#pendingRequests.length} pending requests.`,
+    );
+
+    void this.#fetch(next.request)
+      .then(next.resolve, next.reject)
+      .finally(() => {
+        this.#concurrentLimiter.release();
+        this.#pump();
+      });
+  }
+
+  #schedulePump(waitMs: number) {
+    if (this.#scheduledPump) return;
+
+    this.#logger.trace(
+      `Waiting for request scheduler for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
+    );
+    this.#scheduledPump = setTimeout(() => {
+      this.#scheduledPump = undefined;
+      this.#pump();
+    }, waitMs);
   }
 }
 
