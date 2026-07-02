@@ -14,12 +14,18 @@ interface DiscoverCreatorPostsDependencies {
 interface DiscoverCreatorPostsOptions {
   creatorId: string;
   firstId?: string;
+  firstPublishedDatetime?: string;
   limit?: number;
 }
 
 export async function discoverCreatorPosts(
   { client, logger }: DiscoverCreatorPostsDependencies,
-  { creatorId, firstId, limit = 300 }: DiscoverCreatorPostsOptions,
+  {
+    creatorId,
+    firstId,
+    firstPublishedDatetime,
+    limit = 300,
+  }: DiscoverCreatorPostsOptions,
 ): Promise<PostSummary[]> {
   logger.debug(
     `Discovering max ${limit} posts from ${firstId ?? "start"} for creator ${creatorId}`,
@@ -27,6 +33,7 @@ export async function discoverCreatorPosts(
   const listCreatorPostsOptions = {
     creatorId,
     firstId,
+    firstPublishedDatetime,
     limit,
     sort: "newest",
   } satisfies ListCreatorPostsParams;
@@ -41,8 +48,13 @@ export async function discoverCreatorPosts(
   // continue fetching until we reach the end of the list
   const remains = await discoverCreatorPosts(
     { client, logger },
-    { creatorId, firstId: last.id, limit },
+    {
+      creatorId,
+      firstId: last.id,
+      firstPublishedDatetime: last.publishedDatetime,
+      limit,
+    },
   );
 
-  return [...posts, ...remains];
+  return [...posts, ...remains.slice(1)];
 }
