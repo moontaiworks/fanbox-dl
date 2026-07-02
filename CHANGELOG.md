@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.5...v1.4.0) (2026-07-02)
+
+### Features
+
+* add Dockerfile ([e3c1655](https://github.com/moontaiworks/fanbox-dl/commit/e3c1655dd1d07deb1a8c548b22f878cbd34b02a6))
+
 ## [1.3.5](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.4...v1.3.5) (2026-07-02)
 
 ### Bug Fixes

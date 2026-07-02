@@ -1,6 +1,6 @@
 {
   "name": "@moontaiworks/fanbox-dl",
-  "version": "1.3.5",
+  "version": "1.4.0",
   "description": "A TypeScript PixivFanbox Downloader and SDK",
   "author": "moontai0724",
   "license": "MIT",
