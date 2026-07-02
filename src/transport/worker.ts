@@ -177,7 +177,7 @@ export class RequestWorker {
 
   #pump() {
     if (this.#pendingRequests.length === 0) return;
-    if (!this.#concurrentLimiter.canAcquire()) {
+    if (!this.#concurrentLimiter.acquire()) {
       this.#logger.trace(
         `Concurrency limit reached (${this.#concurrentLimiter.activeRequests}/${this.#concurrentLimiter.concurrency}).`,
       );
@@ -186,6 +186,7 @@ export class RequestWorker {
 
     const waitMs = this.#timeRateLimiter.waitMs();
     if (waitMs > 0) {
+      this.#concurrentLimiter.release();
       this.#schedulePump(waitMs);
       this.#logger.trace(
         `Waiting for request scheduler for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
@@ -195,11 +196,11 @@ export class RequestWorker {
 
     const next = this.#pendingRequests.shift();
     if (!next) {
+      this.#concurrentLimiter.release();
       this.#logger.trace(`No pending requests to process.`);
       return;
     }
 
-    this.#concurrentLimiter.acquire();
     this.#timeRateLimiter.reserveNextStart();
     this.#logger.trace(
       `Processing queued request with ${this.#concurrentLimiter.activeRequests}/${this.#concurrentLimiter.concurrency} active requests and ${this.#pendingRequests.length} pending requests.`,
