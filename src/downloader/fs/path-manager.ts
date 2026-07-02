@@ -7,6 +7,9 @@ interface PathManagerOptions {
   rootPath: string;
 }
 
+// eslint-disable-next-line no-control-regex
+const INVALID_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
+
 export class PathManager {
   name: string;
   path: string;
@@ -19,7 +22,8 @@ export class PathManager {
   }
 
   asset(index: string, name: string, extension: string) {
-    const fileName = `${index}-${name}.${extension}`;
+    const sanitizedName = name.replace(INVALID_FILENAME_CHARS, "-");
+    const fileName = `${index}-${sanitizedName}.${extension}`;
 
     if (this.#flatPosts) {
       const parent = dirname(this.path);
@@ -42,7 +46,8 @@ export class PathManager {
 
   post(post: Pick<Post, "id" | "publishedDatetime" | "title">) {
     const date = post.publishedDatetime.split("T")[0];
-    const title = `${date}-${post.id}-${post.title}`;
+    const sanitizedTitle = post.title.replace(INVALID_FILENAME_CHARS, "-");
+    const title = `${date}-${post.id}-${sanitizedTitle}`;
 
     return this.dir(title);
   }
