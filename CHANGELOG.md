@@ -1,3 +1,9 @@
+## [1.5.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.2...v1.5.3) (2026-07-02)
+
+### Bug Fixes
+
+* adjust concurrent acquire lock to suppress schedule pump logs ([175648c](https://github.com/moontaiworks/fanbox-dl/commit/175648c183f4ecdbb3bdedbf5c1db7d9ccf5482b))
+
 ## [1.5.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.1...v1.5.2) (2026-07-02)
 
 ### Bug Fixes
