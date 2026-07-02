@@ -1,3 +1,9 @@
+## [1.4.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.2...v1.4.3) (2026-07-02)
+
+### Bug Fixes
+
+* **image:** use lts-alpine for image ([d937909](https://github.com/moontaiworks/fanbox-dl/commit/d9379099486c5b077accf2585dab5416a3fba83d))
+
 ## [1.4.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.1...v1.4.2) (2026-07-02)
 
 ### Bug Fixes
