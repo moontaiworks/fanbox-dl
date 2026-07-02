@@ -99,7 +99,6 @@ export class RequestWorker {
   #maxRetries: number;
   #pendingRequests: PendingRequest[] = [];
   #rateLimitPauseMs?: number;
-  #scheduledPump?: ReturnType<typeof setTimeout>;
   #timeRateLimiter: TimeRateLimiter;
   #transport: HttpTransport;
 
@@ -215,13 +214,10 @@ export class RequestWorker {
   }
 
   #schedulePump(waitMs: number) {
-    if (this.#scheduledPump) return;
-
     this.#logger.trace(
-      `Waiting for request scheduler for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
+      `Scheduled pump for ${waitMs}ms, until ${new Date(this.#timeRateLimiter.nextAvailableAt).toISOString()}.`,
     );
-    this.#scheduledPump = setTimeout(() => {
-      this.#scheduledPump = undefined;
+    setTimeout(() => {
       this.#pump();
     }, waitMs);
   }
