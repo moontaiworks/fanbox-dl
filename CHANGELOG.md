@@ -1,3 +1,10 @@
+## [1.3.5](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.4...v1.3.5) (2026-07-02)
+
+### Bug Fixes
+
+* honor limiters ([29997b3](https://github.com/moontaiworks/fanbox-dl/commit/29997b3879ee208f9c3cd9213e83d5c78dd45eb1))
+* sanitize file and dir names ([a2bedc2](https://github.com/moontaiworks/fanbox-dl/commit/a2bedc21bb4ac20749b399b6bcd89d67061ac2db))
+
 ## [1.3.4](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.3...v1.3.4) (2026-06-30)
 
 ### Bug Fixes
