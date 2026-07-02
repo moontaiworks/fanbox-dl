@@ -1,4 +1,4 @@
-FROM node
+FROM node:lts-alpine
 
 ARG PACKAGE_VERSION=latest
 
