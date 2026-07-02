@@ -2,10 +2,14 @@ import { basename, dirname, join, resolve } from "node:path";
 
 import type { Post } from "../../client/types.js";
 
+export interface FilenameSegment {
+  context: string;
+  required: boolean;
+}
+
 interface PathManagerOptions {
-  flatParentMinBytes?: number;
   flatPosts: boolean;
-  maxFilenameBytes?: number;
+  nameSegments?: FilenameSegment[];
   rootPath: string;
 }
 
@@ -14,42 +18,37 @@ const INVALID_FILENAME_CHARS = /[<>:"/\\|?*\x00-\x1F]/g;
 const DEFAULT_MAX_FILENAME_BYTES = 250;
 const TEMP_FILE_SUFFIX = ".part";
 const TRUNCATED_MARKER = "⋯";
-const DEFAULT_FLAT_PARENT_MIN_BYTES = Buffer.byteLength(TRUNCATED_MARKER);
 
 export class PathManager {
   name: string;
   path: string;
-  #flatParentMinBytes: number;
   #flatPosts: boolean;
-  #maxFilenameBytes: number;
+  #nameSegments: FilenameSegment[];
 
-  constructor({
-    flatParentMinBytes = DEFAULT_FLAT_PARENT_MIN_BYTES,
-    flatPosts,
-    maxFilenameBytes = DEFAULT_MAX_FILENAME_BYTES,
-    rootPath,
-  }: PathManagerOptions) {
+  constructor({ flatPosts, nameSegments, rootPath }: PathManagerOptions) {
     this.path = resolve(rootPath);
-    this.#flatParentMinBytes = flatParentMinBytes;
     this.#flatPosts = flatPosts;
-    this.#maxFilenameBytes = maxFilenameBytes;
     this.name = basename(this.path);
+    this.#nameSegments = nameSegments ?? [
+      { context: this.name, required: true },
+    ];
   }
 
-  asset(index: string, name: string, extension: string) {
-    const sanitizedName = name.replace(INVALID_FILENAME_CHARS, "-");
+  asset(segments: FilenameSegment[], extension: string) {
+    const sanitizedSegments = segments.map(({ context, required }) => ({
+      context: context.replace(INVALID_FILENAME_CHARS, "-"),
+      required,
+    }));
     const maxFinalFilenameBytes =
-      this.#maxFilenameBytes - Buffer.byteLength(TEMP_FILE_SUFFIX);
+      DEFAULT_MAX_FILENAME_BYTES - Buffer.byteLength(TEMP_FILE_SUFFIX);
 
     if (this.#flatPosts) {
       const parent = dirname(this.path);
       const fullname = formatFlatAssetFilename(
-        this.name,
-        index,
-        sanitizedName,
+        this.#nameSegments,
+        sanitizedSegments,
         extension,
         maxFinalFilenameBytes,
-        this.#flatParentMinBytes,
       );
 
       return join(parent, fullname);
@@ -57,20 +56,17 @@ export class PathManager {
 
     return join(
       this.path,
-      formatAssetFilename(
-        index,
-        sanitizedName,
-        extension,
-        maxFinalFilenameBytes,
-      ),
+      formatAssetFilename(sanitizedSegments, extension, maxFinalFilenameBytes),
     );
   }
 
-  dir(name: string) {
+  dir(segments: FilenameSegment[]) {
+    const sanitizedSegments = sanitizeSegments(segments);
+    const name = formatName(sanitizedSegments, DEFAULT_MAX_FILENAME_BYTES);
+
     return new PathManager({
-      flatParentMinBytes: this.#flatParentMinBytes,
       flatPosts: this.#flatPosts,
-      maxFilenameBytes: this.#maxFilenameBytes,
+      nameSegments: sanitizedSegments,
       rootPath: join(this.path, name),
     });
   }
@@ -81,55 +77,100 @@ export class PathManager {
 
   post(post: Pick<Post, "id" | "publishedDatetime" | "title">) {
     const date = post.publishedDatetime.split("T")[0];
-    const sanitizedTitle = post.title.replace(INVALID_FILENAME_CHARS, "-");
-    const title = `${date}-${post.id}-${sanitizedTitle}`;
-
-    return this.dir(title);
+    return this.dir([
+      { context: date, required: true },
+      { context: post.id, required: true },
+      { context: post.title, required: false },
+    ]);
   }
 }
 
 function formatAssetFilename(
-  index: string,
-  name: string,
+  segments: FilenameSegment[],
   extension: string,
   maxBytes: number,
 ) {
-  const prefix = `${index}-`;
   const suffix = `.${extension}`;
-  const nameBytes =
-    maxBytes - Buffer.byteLength(prefix) - Buffer.byteLength(suffix);
-
-  return `${prefix}${truncateUtf8(name, nameBytes)}${suffix}`;
+  return `${formatSegments(segments, maxBytes - Buffer.byteLength(suffix)).join(
+    "-",
+  )}${suffix}`;
 }
 
 function formatFlatAssetFilename(
-  postName: string,
-  index: string,
-  name: string,
+  postNameSegments: FilenameSegment[],
+  segments: FilenameSegment[],
   extension: string,
   maxBytes: number,
-  flatParentMinBytes: number,
 ) {
-  const fileName = formatAssetFilename(index, name, extension, maxBytes);
+  const fileName = formatAssetFilename(segments, extension, maxBytes);
+  const postName = formatName(postNameSegments, maxBytes);
   const candidate = `${postName}.${fileName}`;
   if (Buffer.byteLength(candidate) <= maxBytes) return candidate;
 
   const separatorBytes = Buffer.byteLength(".");
   const minimumPostNameBytes = Math.min(
     Buffer.byteLength(postName),
-    flatParentMinBytes,
+    minimumSegmentsBytes(postNameSegments),
   );
   const fileNameBytes = maxBytes - separatorBytes - minimumPostNameBytes;
   const truncatedFileName = formatAssetFilename(
-    index,
-    name,
+    segments,
     extension,
     fileNameBytes,
   );
   const postNameBytes =
     maxBytes - separatorBytes - Buffer.byteLength(truncatedFileName);
 
-  return `${truncateUtf8(postName, postNameBytes)}.${truncatedFileName}`;
+  return `${formatName(postNameSegments, postNameBytes)}.${truncatedFileName}`;
+}
+
+function formatName(segments: FilenameSegment[], maxBytes: number) {
+  return formatSegments(segments, maxBytes).join("-");
+}
+
+function formatSegments(segments: FilenameSegment[], maxBytes: number) {
+  const separator = "-";
+  const separatorBytes =
+    Math.max(segments.length - 1, 0) * Buffer.byteLength(separator);
+  const requiredBytes = segments.reduce(
+    (total, segment) =>
+      segment.required ? total + Buffer.byteLength(segment.context) : total,
+    separatorBytes,
+  );
+  let optionalBytes = maxBytes - requiredBytes;
+  return segments.map((segment) => {
+    if (segment.required) return segment.context;
+
+    const formatted = truncateUtf8(segment.context, optionalBytes);
+    optionalBytes -= Buffer.byteLength(formatted);
+
+    return formatted;
+  });
+}
+
+function minimumSegmentsBytes(segments: FilenameSegment[]) {
+  if (!segments.length) return 0;
+
+  const separatorBytes =
+    Math.max(segments.length - 1, 0) * Buffer.byteLength("-");
+  const optionalMarkerBytes = segments.reduce(
+    (total, segment) =>
+      segment.required ? total : total + Buffer.byteLength(TRUNCATED_MARKER),
+    0,
+  );
+
+  return segments.reduce(
+    (total, segment) =>
+      segment.required ? total + Buffer.byteLength(segment.context) : total,
+    separatorBytes + optionalMarkerBytes,
+  );
+}
+
+function sanitizeSegments(segments: FilenameSegment[]) {
+  return segments.map(({ context, required }) => ({
+    context: context.replace(INVALID_FILENAME_CHARS, "-"),
+    required,
+  }));
 }
 
 function truncateUtf8(value: string, maxBytes: number) {

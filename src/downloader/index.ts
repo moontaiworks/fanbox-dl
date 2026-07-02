@@ -38,9 +38,7 @@ export async function download(
     },
   );
   const pathManager = new PathManager({
-    flatParentMinBytes: options.flatParentMinBytes,
     flatPosts: options.flatPosts,
-    maxFilenameBytes: options.maxFilenameBytes,
     rootPath: options.output,
   });
   const client = new FanboxClient({ headers, transport });
@@ -57,7 +55,9 @@ export async function download(
   for (const creatorId of creatorIds) {
     logger.debug(`Initializing download for creator ${creatorId}`);
     const creatorManifest = await creatorManifestManager.load(creatorId);
-    const creatorPathManager = pathManager.dir(creatorId);
+    const creatorPathManager = pathManager.dir([
+      { context: creatorId, required: true },
+    ]);
 
     const syncCreatorPromise = syncCreator({
       client,

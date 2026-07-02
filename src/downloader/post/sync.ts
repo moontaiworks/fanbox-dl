@@ -91,8 +91,10 @@ export async function syncPost(
 
       if (content instanceof ImageContent) {
         const destination = pathManager.asset(
-          indexPadded,
-          content.id,
+          [
+            { context: indexPadded, required: true },
+            { context: content.id, required: true },
+          ],
           content.extension,
         );
 
@@ -128,8 +130,11 @@ export async function syncPost(
 
       if (content instanceof FileContent) {
         const destination = pathManager.asset(
-          indexPadded,
-          `${content.name}-${content.id}`,
+          [
+            { context: indexPadded, required: true },
+            { context: content.name, required: false },
+            { context: content.id, required: true },
+          ],
           content.extension,
         );
 
@@ -184,7 +189,13 @@ export async function syncPost(
   });
 
   await writeFile(
-    pathManager.asset("0".padStart(totalDigits, "0"), "content", "md"),
+    pathManager.asset(
+      [
+        { context: "0".padStart(totalDigits, "0"), required: true },
+        { context: "content", required: true },
+      ],
+      "md",
+    ),
     markdownContent.join("\n\n"),
   );
 

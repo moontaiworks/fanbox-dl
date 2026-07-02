@@ -34,7 +34,12 @@ export class CreatorManifestManager {
 
   #createManifest(creatorId: string): CreatorManifest {
     const manifest = new CreatorManifest(
-      { logger: this.#logger, pathManager: this.#pathManager.dir(creatorId) },
+      {
+        logger: this.#logger,
+        pathManager: this.#pathManager.dir([
+          { context: creatorId, required: true },
+        ]),
+      },
       creatorId,
     );
     this.#manifests.set(creatorId, manifest);
