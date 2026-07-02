@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.1...v1.4.2) (2026-07-02)
+
+### Bug Fixes
+
+* upgrade action versions ([f56c829](https://github.com/moontaiworks/fanbox-dl/commit/f56c8299929a29d4547d5531c9c00bb60cf7d762))
+
 ## [1.4.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.0...v1.4.1) (2026-07-02)
 
 ### Bug Fixes
