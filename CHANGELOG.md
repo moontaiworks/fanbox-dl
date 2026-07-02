@@ -1,3 +1,9 @@
+## [1.5.5](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.4...v1.5.5) (2026-07-02)
+
+### Bug Fixes
+
+* discover next page post ([d79f1d3](https://github.com/moontaiworks/fanbox-dl/commit/d79f1d3db1b78780bc71fdf8c74d81b0184279c6))
+
 ## [1.5.4](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.3...v1.5.4) (2026-07-02)
 
 ### Bug Fixes
