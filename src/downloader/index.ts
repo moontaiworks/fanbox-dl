@@ -30,6 +30,7 @@ export async function download(
     { logger },
     {
       concurrency: options.concurrency,
+      http2SessionMultiplier: options.http2SessionMultiplier,
       intervalMs: options.requestIntervalMs,
       maxRetries: options.maxRetries,
       rateLimitPauseMs: options.rateLimitPauseMs,

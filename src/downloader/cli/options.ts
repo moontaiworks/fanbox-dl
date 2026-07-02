@@ -29,6 +29,8 @@ Download:
 
 Requests:
   --concurrency <n>         Concurrent requests. Default: 10.
+  --http2-session-multiplier <n>
+                            HTTP/2 sessions per origin multiplier based on concurrency. Default: 10.
   --request-interval-ms <n> Delay between request starts. Default: 500.
   --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
   --max-retries <n>         Retry attempts. Default: 3.
@@ -44,6 +46,7 @@ export interface DownloadOptions {
   creatorIds: string[];
   flatPosts: boolean;
   following: boolean;
+  http2SessionMultiplier: number;
   ignoreCreatorIds: string[];
   maxRetries: number;
   output: string;
@@ -75,6 +78,10 @@ export function parseDownloadOptions(
     creatorIds,
     flatPosts: values["flat-posts"],
     following: values.following,
+    http2SessionMultiplier: parsePositiveInteger(
+      "http2-session-multiplier",
+      values["http2-session-multiplier"],
+    ),
     ignoreCreatorIds: values["ignore-creator"] ?? [],
     maxRetries: parseNonNegativeInteger("max-retries", values["max-retries"]),
     output: values.output,
@@ -133,6 +140,7 @@ function parseDownloadArgs(args: string[]) {
         "dry-run": { default: false, type: "boolean" },
         "flat-posts": { default: false, type: "boolean" },
         following: { default: false, type: "boolean" },
+        "http2-session-multiplier": { default: "10", type: "string" },
         "ignore-creator": { multiple: true, type: "string" },
         "log-level": { default: "info", type: "string" },
         "max-retries": { default: "3", type: "string" },

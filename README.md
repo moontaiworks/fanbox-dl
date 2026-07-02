@@ -47,26 +47,27 @@ At least one creator selector is required: `--creator`, `--following`, or
 
 ### CLI Options
 
-| Option                      | Description                                                                                            | Example                          | Default             |
-| --------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------------- |
-| `--creator <id>`            | Add a creator ID to download. Can be repeated.                                                         | `--creator alpha --creator beta` | None                |
-| `--following`               | Download posts from followed creators. Requires authentication.                                        | `--following`                    | `false`             |
-| `--supporting`              | Download posts from supporting creators. Requires authentication.                                      | `--supporting`                   | `false`             |
-| `--ignore-creator <id>`     | Exclude a creator ID from the selected creators. Can be repeated.                                      | `--ignore-creator beta`          | None                |
-| `--cookie <value>`          | Raw `FANBOXSESSID`, `FANBOXSESSID=...`, or a full Cookie header.                                       | `--cookie "FANBOXSESSID=..."`    | `FANBOX_SESSION_ID` |
-| `--cookie-file <path>`      | Read a raw cookie value or Netscape `cookies.txt`. FANBOX cookies are selected automatically.          | `--cookie-file ./cookies.txt`    | None                |
-| `--user-agent <value>`      | Send the same User-Agent as the browser session that produced your cookie.                             | `--user-agent "Mozilla/5.0 ..."` | random string       |
-| `--output <path>`           | Directory where downloaded creators and posts are stored.                                              | `--output ./fanbox-downloads`    | `fanbox-downloads`  |
-| `--dry-run`                 | List selected creators and discovered post summaries without writing files or requesting post details. | `--dry-run`                      | `false`             |
-| `--flat-posts`              | Store post files directly under each creator directory instead of one directory per post.              | `--flat-posts`                   | `false`             |
-| `--verify-assets`           | Verify existing asset size and SHA-256 before deciding whether to skip a file.                         | `--verify-assets`                | `false`             |
-| `--concurrency <n>`         | Maximum number of concurrent requests. Must be greater than `0`.                                       | `--concurrency 3`                | `3`                 |
-| `--request-interval-ms <n>` | Delay between request starts, in milliseconds.                                                         | `--request-interval-ms 1000`     | `0`                 |
-| `--rate-limit-pause-ms <n>` | Pause duration after HTTP 429 when FANBOX does not send `Retry-After`.                                 | `--rate-limit-pause-ms 60000`    | `60000`             |
-| `--max-retries <n>`         | Retry attempts for retryable request failures.                                                         | `--max-retries 5`                | `5`                 |
-| `--log-format json\|pretty` | Choose JSON Lines logs or human-readable logs.                                                         | `--log-format pretty`            | `json`              |
-| `--log-level <level>`       | Show logs at this level or higher. One of `trace`, `debug`, `info`, `warn`, `error` or `silent`.       | `--log-level trace`              | `info`              |
-| `--help`                    | Show CLI help.                                                                                         | `--help`                         | None                |
+| Option                           | Description                                                                                            | Example                          | Default             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------------- |
+| `--creator <id>`                 | Add a creator ID to download. Can be repeated.                                                         | `--creator alpha --creator beta` | None                |
+| `--following`                    | Download posts from followed creators. Requires authentication.                                        | `--following`                    | `false`             |
+| `--supporting`                   | Download posts from supporting creators. Requires authentication.                                      | `--supporting`                   | `false`             |
+| `--ignore-creator <id>`          | Exclude a creator ID from the selected creators. Can be repeated.                                      | `--ignore-creator beta`          | None                |
+| `--cookie <value>`               | Raw `FANBOXSESSID`, `FANBOXSESSID=...`, or a full Cookie header.                                       | `--cookie "FANBOXSESSID=..."`    | `FANBOX_SESSION_ID` |
+| `--cookie-file <path>`           | Read a raw cookie value or Netscape `cookies.txt`. FANBOX cookies are selected automatically.          | `--cookie-file ./cookies.txt`    | None                |
+| `--user-agent <value>`           | Send the same User-Agent as the browser session that produced your cookie.                             | `--user-agent "Mozilla/5.0 ..."` | random string       |
+| `--output <path>`                | Directory where downloaded creators and posts are stored.                                              | `--output ./fanbox-downloads`    | `fanbox-downloads`  |
+| `--dry-run`                      | List selected creators and discovered post summaries without writing files or requesting post details. | `--dry-run`                      | `false`             |
+| `--flat-posts`                   | Store post files directly under each creator directory instead of one directory per post.              | `--flat-posts`                   | `false`             |
+| `--verify-assets`                | Verify existing asset size and SHA-256 before deciding whether to skip a file.                         | `--verify-assets`                | `false`             |
+| `--concurrency <n>`              | Maximum number of concurrent requests. Must be greater than `0`.                                       | `--concurrency 3`                | `3`                 |
+| `--http2-session-multiplier <n>` | Multiplier used with concurrency to set HTTP/2 sessions per origin. Must be greater than `0`.          | `--http2-session-multiplier 10`  | `10`                |
+| `--request-interval-ms <n>`      | Delay between request starts, in milliseconds.                                                         | `--request-interval-ms 1000`     | `0`                 |
+| `--rate-limit-pause-ms <n>`      | Pause duration after HTTP 429 when FANBOX does not send `Retry-After`.                                 | `--rate-limit-pause-ms 60000`    | `60000`             |
+| `--max-retries <n>`              | Retry attempts for retryable request failures.                                                         | `--max-retries 5`                | `5`                 |
+| `--log-format json\|pretty`      | Choose JSON Lines logs or human-readable logs.                                                         | `--log-format pretty`            | `json`              |
+| `--log-level <level>`            | Show logs at this level or higher. One of `trace`, `debug`, `info`, `warn`, `error` or `silent`.       | `--log-level trace`              | `info`              |
+| `--help`                         | Show CLI help.                                                                                         | `--help`                         | None                |
 
 ### CLI Notes
 

@@ -21,13 +21,22 @@ describe("RequestWorker transport defaults", () => {
     http2TransportOptions.length = 0;
   });
 
-  it("uses five HTTP/2 sessions per configured request concurrency", () => {
+  it("uses ten HTTP/2 sessions per configured request concurrency by default", () => {
     new RequestWorker(
       { logger: silentLogger },
       { concurrency: 7, intervalMs: 0 },
     );
 
-    expect(http2TransportOptions).toEqual([{ sessionsPerOrigin: 35 }]);
+    expect(http2TransportOptions).toEqual([{ sessionsPerOrigin: 70 }]);
+  });
+
+  it("uses the configured HTTP/2 session multiplier", () => {
+    new RequestWorker(
+      { logger: silentLogger },
+      { concurrency: 7, http2SessionMultiplier: 3, intervalMs: 0 },
+    );
+
+    expect(http2TransportOptions).toEqual([{ sessionsPerOrigin: 21 }]);
   });
 });
 

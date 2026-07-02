@@ -4,6 +4,7 @@ import { Http2Transport, type HttpTransport } from "./http2.js";
 
 export interface RequestQueueOptions {
   concurrency?: number;
+  http2SessionMultiplier?: number;
   intervalMs?: number;
   maxRetries?: number;
   rateLimitPauseMs?: number;
@@ -102,10 +103,13 @@ export class RequestWorker {
     { logger }: { logger: Logger },
     {
       concurrency = 100,
+      http2SessionMultiplier = 10,
       intervalMs = 1000,
       maxRetries = 3,
       rateLimitPauseMs,
-      transport = new Http2Transport({ sessionsPerOrigin: concurrency * 5 }),
+      transport = new Http2Transport({
+        sessionsPerOrigin: concurrency * http2SessionMultiplier,
+      }),
     }: RequestQueueOptions = {},
   ) {
     this.#logger = logger;
@@ -117,6 +121,7 @@ export class RequestWorker {
     logger.trace(
       {
         concurrency,
+        http2SessionMultiplier,
         intervalMs,
         maxRetries,
         rateLimitPauseMs,
