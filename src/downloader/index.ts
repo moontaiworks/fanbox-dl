@@ -49,11 +49,14 @@ export async function download(
     pathManager,
   });
 
+  const processingCreators: Promise<void>[] = [];
+
   for (const creatorId of creatorIds) {
+    logger.debug(`Initializing download for creator ${creatorId}`);
     const creatorManifest = await creatorManifestManager.load(creatorId);
     const creatorPathManager = pathManager.dir(creatorId);
 
-    await syncCreator({
+    const syncCreatorPromise = syncCreator({
       client,
       headers,
       logger,
@@ -66,11 +69,14 @@ export async function download(
       );
       failed = true;
     });
+    processingCreators.push(syncCreatorPromise);
 
     const success = !hasFailures(creatorManifest);
     failed ||= !success;
-    await creatorManifest.save();
   }
+
+  await Promise.all(processingCreators);
+  await creatorManifestManager.saveAll();
 
   return failed;
 }
