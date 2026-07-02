@@ -1,3 +1,11 @@
+## [1.5.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.3...v1.5.0) (2026-07-02)
+
+### Features
+
+* ability to handle multiple creators in concurrently ([036ba80](https://github.com/moontaiworks/fanbox-dl/commit/036ba80ecb089652732efbc6361681bc02067225))
+* add log when all creators initialized ([acb99ab](https://github.com/moontaiworks/fanbox-dl/commit/acb99abab47d160bf4560e1e236b8cf61fd73a3a))
+* add log when all posts initialized ([9d1c19a](https://github.com/moontaiworks/fanbox-dl/commit/9d1c19abb67c11683d5069244ca2773fb142f3eb))
+
 ## [1.4.3](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.2...v1.4.3) (2026-07-02)
 
 ### Bug Fixes
