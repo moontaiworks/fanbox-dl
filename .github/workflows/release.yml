@@ -15,6 +15,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      git_tag: ${{ steps.semantic-release.outputs.git_tag }}
 
     steps:
       - name: Checkout code
@@ -42,7 +44,23 @@ jobs:
         run: pnpm run build
 
       - name: Release
+        id: semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+        run: |
+          npx semantic-release
+
+          git_tag="$(git tag --points-at HEAD | tail -n 1)"
+
+          if [ -n "$git_tag" ]; then
+            echo "git_tag=$git_tag" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-docker:
+    needs: release
+    if: needs.release.outputs.git_tag != ''
+    uses: ./.github/workflows/docker.yml
+    with:
+      package_version: ${{ needs.release.outputs.git_tag }}
+    secrets: inherit
