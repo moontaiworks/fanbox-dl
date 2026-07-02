@@ -1,4 +1,7 @@
-import { Http2SessionManager } from "./http2-session.js";
+import {
+  Http2SessionManager,
+  type Http2SessionManagerOptions,
+} from "./http2-session.js";
 
 const HTTP2_HEADER_STATUS = ":status";
 
@@ -14,7 +17,11 @@ export class Http2Error extends Error {
 }
 
 export class Http2Transport {
-  readonly #pool = new Http2SessionManager();
+  readonly #pool: Http2SessionManager;
+
+  constructor(options: Http2SessionManagerOptions = {}) {
+    this.#pool = new Http2SessionManager(options);
+  }
 
   fetch(input: Request | string | URL) {
     const request = input instanceof Request ? input : new Request(input);

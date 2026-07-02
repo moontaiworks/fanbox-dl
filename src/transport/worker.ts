@@ -109,7 +109,7 @@ export class RequestWorker {
       intervalMs = 1000,
       maxRetries = 3,
       rateLimitPauseMs,
-      transport = new Http2Transport(),
+      transport = new Http2Transport({ sessionsPerOrigin: concurrency * 5 }),
     }: RequestQueueOptions = {},
   ) {
     this.#logger = logger;
