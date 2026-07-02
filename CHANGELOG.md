@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.4.0...v1.4.1) (2026-07-02)
+
+### Bug Fixes
+
+* correct action flow ([67118be](https://github.com/moontaiworks/fanbox-dl/commit/67118be87fa6041a9bd23d92f668504c20ea35f8))
+
 ## [1.4.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.3.5...v1.4.0) (2026-07-02)
 
 ### Features
