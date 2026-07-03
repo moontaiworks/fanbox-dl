@@ -82,12 +82,13 @@ export async function download(
 
   await Promise.all(processingCreators);
   await creatorManifestManager.saveAll();
-  const failed = creatorManifestManager.getFailedCreatorIds();
+  const failedCreatorIds = creatorManifestManager.getFailedCreatorIds();
 
   logger.info(
-    { failed },
-    `Download completed for ${creatorIds.length} creators, with ${failed.length} failures.`,
+    { failedCreatorIds },
+    `Download completed for ${creatorIds.length} creators, with ${failedCreatorIds.length} failures.`,
   );
 
-  return !!failed.length;
+  const hasFailedCreators = failedCreatorIds.length > 0;
+  return hasFailedCreators;
 }
