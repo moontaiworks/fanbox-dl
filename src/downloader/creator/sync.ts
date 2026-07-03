@@ -7,6 +7,12 @@ import type { CreatorManifest, PostManifestData } from "../manifest/creator.js";
 import { preSyncPostCheck, syncPost } from "../post/sync.js";
 import { discoverCreatorPosts } from "./discover-posts.js";
 
+interface PostManifestSource {
+  id: string;
+  isRestricted: boolean;
+  updatedDatetime: string;
+}
+
 interface SyncCreatorDeps {
   client: FanboxClient;
   headers?: Record<string, string>;
@@ -52,19 +58,11 @@ export async function syncCreator({
     const post = await client
       .getPost({ postId: postSummary.id })
       .catch(async (err: unknown) => {
-        manifest.posts[postSummary.id] = {
-          assets: {},
-          error: String(err),
-          id: postSummary.id,
-          restricted: postSummary.isRestricted,
-          status: "failed",
-          updatedDatetime: postSummary.updatedDatetime,
-        } satisfies PostManifestData;
         logger.error(
           { err },
           `Error occurred while fetch post manifest of ${postIndex}/${postSummaries.length} post ${postSummary.id}, skipping.`,
         );
-        await manifest.save();
+        await saveFailedPostManifest(manifest, postSummary, err);
       });
     if (!post) continue;
 
@@ -77,19 +75,11 @@ export async function syncCreator({
         return manifest.save();
       })
       .catch((err: unknown) => {
-        manifest.posts[postSummary.id] = {
-          assets: {},
-          error: String(err),
-          id: postSummary.id,
-          restricted: postSummary.isRestricted,
-          status: "failed",
-          updatedDatetime: postSummary.updatedDatetime,
-        } satisfies PostManifestData;
         logger.error(
           { err },
           `Error occurred while syncing ${postIndex}/${postSummaries.length} post ${postSummary.id}, skipping.`,
         );
-        return manifest.save();
+        return saveFailedPostManifest(manifest, postSummary, err);
       });
 
     processingPosts.push(syncPostPromise);
@@ -100,4 +90,27 @@ export async function syncCreator({
   );
 
   await Promise.all(processingPosts);
+}
+
+function failedPostManifestData(
+  postSummary: PostManifestSource,
+  err: unknown,
+): PostManifestData {
+  return {
+    assets: {},
+    error: String(err),
+    id: postSummary.id,
+    restricted: postSummary.isRestricted,
+    status: "failed",
+    updatedDatetime: postSummary.updatedDatetime,
+  };
+}
+
+async function saveFailedPostManifest(
+  manifest: CreatorManifest,
+  postSummary: PostManifestSource,
+  err: unknown,
+): Promise<void> {
+  manifest.posts[postSummary.id] = failedPostManifestData(postSummary, err);
+  await manifest.save();
 }
