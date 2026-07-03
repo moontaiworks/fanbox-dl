@@ -41,17 +41,15 @@ export async function discoverCreatorPosts(
   logger.debug(`Discovered ${posts.length} posts for creator ${creatorId}`);
   if (posts.length < limit) return posts;
 
-  // check if the last post is already in the manifest, if so, we can stop
-  // fetching more posts
-  const last = posts.at(-1)!;
+  const lastPost = posts.at(-1);
+  if (!lastPost) return posts;
 
-  // continue fetching until we reach the end of the list
   const remains = await discoverCreatorPosts(
     { client, logger },
     {
       creatorId,
-      firstId: last.id,
-      firstPublishedDatetime: last.publishedDatetime,
+      firstId: lastPost.id,
+      firstPublishedDatetime: lastPost.publishedDatetime,
       limit,
     },
   );
