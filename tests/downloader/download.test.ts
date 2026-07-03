@@ -21,7 +21,7 @@ describe("download", () => {
       await readFile(join(output, "creator-1", "manifest.json"), "utf8"),
     ) as { error?: string };
 
-    expect(failed).toEqual(["creator-1"]);
+    expect(failed).toEqual(true);
     expect(manifest.error).toContain("FANBOX API request failed: 500");
   });
 
@@ -35,7 +35,7 @@ describe("download", () => {
       createDownloadOptions({ output }),
     );
 
-    expect(failed).toEqual(["creator-1"]);
+    expect(failed).toEqual(true);
   });
 });
 

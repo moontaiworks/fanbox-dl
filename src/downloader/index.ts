@@ -89,5 +89,5 @@ export async function download(
     `Download completed for ${creatorIds.length} creators, with ${failed.length} failures.`,
   );
 
-  return failed;
+  return !!failed.length;
 }
