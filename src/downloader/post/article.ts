@@ -24,36 +24,38 @@ interface TypeMap {
 
 export function formatArticleContents(post: ArticlePost): Content[] {
   return post.body.blocks
-    .map((block) => {
-      if (isArticleBlockType("image", block)) {
-        const image = post.body.imageMap[block.imageId];
-        return new ImageContent(image);
-      }
+    .map((block) => formatArticleBlock(post, block))
+    .filter(isContent);
+}
 
-      if (isArticleBlockType("file", block)) {
-        const file = post.body.fileMap[block.fileId];
-        return new FileContent(file);
-      }
+function formatArticleBlock(
+  post: ArticlePost,
+  block: ArticleBlock,
+): Content | null {
+  if (isArticleBlockType("image", block)) {
+    const image = post.body.imageMap[block.imageId];
+    return new ImageContent(image);
+  }
 
-      if (isArticleBlockType("url_embed", block)) {
-        return handleUrlEmbedBlock(block, post.body.urlEmbedMap);
-      }
+  if (isArticleBlockType("file", block)) {
+    const file = post.body.fileMap[block.fileId];
+    return new FileContent(file);
+  }
 
-      if (isArticleBlockType("embed", block)) {
-        return handleEmbedBlock(block, post.body.embedMap);
-      }
+  if (isArticleBlockType("url_embed", block)) {
+    return handleUrlEmbedBlock(block, post.body.urlEmbedMap);
+  }
 
-      if (
-        isArticleBlockType("p", block) ||
-        isArticleBlockType("header", block)
-      ) {
-        return new TextContent(block);
-      }
+  if (isArticleBlockType("embed", block)) {
+    return handleEmbedBlock(block, post.body.embedMap);
+  }
 
-      // TODO: warn unknown article block type
-      return null;
-    })
-    .filter((content) => !!content);
+  if (isArticleBlockType("p", block) || isArticleBlockType("header", block)) {
+    return new TextContent(block);
+  }
+
+  // TODO: warn unknown article block type
+  return null;
 }
 
 function isArticleBlockType<T extends keyof TypeMap>(
@@ -61,4 +63,8 @@ function isArticleBlockType<T extends keyof TypeMap>(
   item: ArticleBlock,
 ): item is TypeMap[T] {
   return item.type === type;
+}
+
+function isContent(content: Content | null): content is Content {
+  return content !== null;
 }
