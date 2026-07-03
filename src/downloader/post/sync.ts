@@ -18,13 +18,13 @@ import {
   formatTextContent,
 } from "../markdown/asset.js";
 import { FileContent, ImageContent, TextContent } from "./content.js";
+import type { Content, MediaContent } from "./content.js";
 import { formatPostContents } from "./contents.js";
 
 interface PreSyncPostCheckDeps {
   logger: Logger;
   manifest: CreatorManifest;
 }
-
 interface SyncPostDeps {
   headers?: Record<string, string>;
   logger: Logger;
@@ -78,94 +78,21 @@ export async function syncPost(
 
   let hasUnknownContent = false;
   const assetManifestData: Record<string, AssetManifestData> = {};
-  const download = downloadAsset.bind(undefined, {
-    headers,
-    logger,
-    transport,
-  });
 
   const totalDigits = contents.length.toString().length;
   const results = await Promise.allSettled(
     contents.map(async (content, index) => {
       const indexPadded = index.toString().padStart(totalDigits, "0");
 
-      if (content instanceof ImageContent) {
-        const destination = pathManager.asset(
-          [
-            { context: indexPadded, required: true },
-            { context: content.id, required: true },
-          ],
-          content.extension,
+      if (isMediaContent(content)) {
+        return syncMediaContent(
+          { assetManifestData, headers, logger, pathManager, transport },
+          {
+            content,
+            fallbackDateTime: post.updatedDatetime,
+            indexPadded,
+          },
         );
-
-        const { bytes, sha256 } = await download({
-          destination,
-          fallbackDateTime: post.updatedDatetime,
-          mediaContent: content,
-        }).catch((err: unknown) => {
-          logger.error(
-            { err },
-            `Error occurred while downloading image asset ${content.id}, skipping.`,
-          );
-
-          assetManifestData[content.id] = {
-            path: destination,
-            status: "failed",
-            url: content.url,
-          };
-
-          throw err;
-        });
-
-        assetManifestData[content.id] = {
-          bytes,
-          path: destination,
-          sha256,
-          status: "complete",
-          url: content.url,
-        };
-
-        return formatImageAsset({ assetPath: destination });
-      }
-
-      if (content instanceof FileContent) {
-        const destination = pathManager.asset(
-          [
-            { context: indexPadded, required: true },
-            { context: content.name, required: false },
-            { context: content.id, required: true },
-          ],
-          content.extension,
-        );
-
-        const { bytes, sha256 } = await download({
-          destination,
-          fallbackDateTime: post.updatedDatetime,
-          mediaContent: content,
-        }).catch((err: unknown) => {
-          logger.error(
-            { err },
-            `Error occurred while downloading file asset ${content.id}, skipping.`,
-          );
-
-          assetManifestData[content.id] = {
-            path: destination,
-            status: "failed",
-            url: content.url,
-          };
-
-          throw err;
-        });
-
-        assetManifestData[content.id] = {
-          bytes,
-          path: destination,
-          sha256,
-          status: "complete",
-          url: content.url,
-        };
-
-        return formatFileAsset({ assetPath: destination });
       }
 
       if (content instanceof TextContent) {
@@ -224,4 +151,94 @@ function formatCoverImage(post: Post): ImageContent {
     id: "cover",
     originalUrl: post.coverImageUrl,
   });
+}
+
+function formatMediaAsset(content: MediaContent, destination: string) {
+  if (content instanceof ImageContent) {
+    return formatImageAsset({ assetPath: destination });
+  }
+
+  return formatFileAsset({ assetPath: destination });
+}
+
+function isMediaContent(
+  content: Content,
+): content is FileContent | ImageContent {
+  return content instanceof FileContent || content instanceof ImageContent;
+}
+
+function mediaAssetSegments(content: MediaContent, indexPadded: string) {
+  if (content instanceof FileContent) {
+    return [
+      { context: indexPadded, required: true },
+      { context: content.name, required: false },
+      { context: content.id, required: true },
+    ];
+  }
+
+  return [
+    { context: indexPadded, required: true },
+    { context: content.id, required: true },
+  ];
+}
+
+async function syncMediaContent(
+  {
+    assetManifestData,
+    headers,
+    logger,
+    pathManager,
+    transport,
+  }: {
+    assetManifestData: Record<string, AssetManifestData>;
+    headers?: Record<string, string>;
+    logger: Logger;
+    pathManager: PathManager;
+    transport: HttpTransport;
+  },
+  {
+    content,
+    fallbackDateTime,
+    indexPadded,
+  }: {
+    content: FileContent | ImageContent;
+    fallbackDateTime: string;
+    indexPadded: string;
+  },
+) {
+  const destination = pathManager.asset(
+    mediaAssetSegments(content, indexPadded),
+    content.extension,
+  );
+  const { bytes, sha256 } = await downloadAsset(
+    { headers, logger, transport },
+    {
+      destination,
+      fallbackDateTime,
+      mediaContent: content,
+    },
+  ).catch((err: unknown) => {
+    logger.error(
+      { err },
+      `Error occurred while downloading ${content.type} asset ${content.id}, skipping.`,
+    );
+
+    assetManifestData[content.id] = {
+      path: destination,
+      status: "failed",
+      url: content.url,
+    };
+
+    throw err;
+  });
+
+  assetManifestData[content.id] = {
+    bytes,
+    path: destination,
+    sha256,
+    status: "complete",
+    url: content.url,
+  };
+
+  return formatMediaAsset(content, destination);
 }
