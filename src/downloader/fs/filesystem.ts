@@ -3,11 +3,19 @@ import { stat } from "node:fs/promises";
 export async function exists(filePath: string): Promise<boolean> {
   return stat(filePath)
     .then(() => true)
-    .catch(() => false);
+    .catch((error: unknown) => {
+      if (isNotFoundError(error)) return false;
+
+      throw error;
+    });
 }
 
 export async function filesize(path: string) {
-  return stat(path).catch(() => ({ size: 0 }));
+  return stat(path).catch((error: unknown) => {
+    if (isNotFoundError(error)) return { size: 0 };
+
+    throw error;
+  });
 }
 
 export function isNotFoundError(error: unknown): boolean {
