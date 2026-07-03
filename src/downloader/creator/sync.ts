@@ -34,10 +34,10 @@ export async function syncCreator({
 
   const processingPosts: Promise<void>[] = [];
 
-  let index = 0;
-  for (const postSummary of postSummaries) {
+  for (const [index, postSummary] of postSummaries.entries()) {
+    const postIndex = index + 1;
     logger.debug(
-      `Initializing ${++index}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
+      `Initializing ${postIndex}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
     );
     const preCheckResult = preSyncPostCheck({ logger, manifest }, postSummary);
     if (preCheckResult.status !== "pending") {
@@ -62,7 +62,7 @@ export async function syncCreator({
         } satisfies PostManifestData;
         logger.error(
           { err },
-          `Error occurred while fetch post manifest of ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+          `Error occurred while fetch post manifest of ${postIndex}/${postSummaries.length} post ${postSummary.id}, skipping.`,
         );
         await manifest.save();
       });
@@ -87,7 +87,7 @@ export async function syncCreator({
         } satisfies PostManifestData;
         logger.error(
           { err },
-          `Error occurred while syncing ${index}/${postSummaries.length} post ${postSummary.id}, skipping.`,
+          `Error occurred while syncing ${postIndex}/${postSummaries.length} post ${postSummary.id}, skipping.`,
         );
         return manifest.save();
       });
