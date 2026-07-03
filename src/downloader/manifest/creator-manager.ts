@@ -37,11 +37,11 @@ export class CreatorManifestManager {
   }
 
   markFailed(creatorId: string, error: unknown): void {
-    this.#manifests.get(creatorId)!.markFailed(error);
+    this.#loadedManifest(creatorId).markFailed(error);
   }
 
   markSucceeded(creatorId: string): void {
-    this.#manifests.get(creatorId)!.markSucceeded();
+    this.#loadedManifest(creatorId).markSucceeded();
   }
 
   async saveAll(): Promise<void> {
@@ -60,6 +60,15 @@ export class CreatorManifestManager {
       creatorId,
     );
     this.#manifests.set(creatorId, manifest);
+    return manifest;
+  }
+
+  #loadedManifest(creatorId: string): CreatorManifest {
+    const manifest = this.#manifests.get(creatorId);
+    if (!manifest) {
+      throw new Error(`Creator manifest ${creatorId} has not been loaded`);
+    }
+
     return manifest;
   }
 }
