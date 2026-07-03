@@ -21,10 +21,37 @@ import { FileContent, ImageContent, TextContent } from "./content.js";
 import type { Content, MediaContent } from "./content.js";
 import { formatPostContents } from "./contents.js";
 
+type DownloadResult =
+  | {
+      bytes: number;
+      failed: false;
+      sha256: string;
+    }
+  | {
+      error: unknown;
+      failed: true;
+    };
 interface PreSyncPostCheckDeps {
   logger: Logger;
   manifest: CreatorManifest;
 }
+
+interface ProcessContentDeps extends SyncPostDeps {
+  post: Post;
+}
+
+interface ProcessContentOptions {
+  content: Content;
+  indexPadded: string;
+}
+
+interface ProcessedContent {
+  assets?: [string, AssetManifestData][];
+  failed?: boolean;
+  markdown?: string;
+  unknown?: boolean;
+}
+
 interface SyncPostDeps {
   headers?: Record<string, string>;
   logger: Logger;
@@ -76,47 +103,23 @@ export async function syncPost(
   const contents = formatPostContents({ logger }, post);
   if (post.coverImageUrl) contents.unshift(formatCoverImage(post));
 
-  let hasUnknownContent = false;
-  const assetManifestData: Record<string, AssetManifestData> = {};
-
   const totalDigits = contents.length.toString().length;
   const results = await Promise.allSettled(
-    contents.map(async (content, index) => {
-      const indexPadded = index.toString().padStart(totalDigits, "0");
-
-      if (isMediaContent(content)) {
-        return syncMediaContent(
-          { assetManifestData, headers, logger, pathManager, transport },
-          {
-            content,
-            fallbackDateTime: post.updatedDatetime,
-            indexPadded,
-          },
-        );
-      }
-
-      if (content instanceof TextContent) {
-        return formatTextContent(content);
-      }
-
-      logger.warn(
-        `Post ${post.id} has unhandled content type ${content.type}, skipping.`,
-      );
-      hasUnknownContent = true;
-    }),
+    contents.map((content, index) =>
+      processContent(
+        { headers, logger, pathManager, post, transport },
+        { content, indexPadded: index.toString().padStart(totalDigits, "0") },
+      ),
+    ),
   );
-  const hasFailedContent = results.some(
+  const hasRejectedContent = results.some(
     (result) => result.status === "rejected",
   );
-
-  const markdownContent = results.map((result) => {
-    if (result.status === "fulfilled") {
-      return result.value;
-    }
-
-    const err = String(result.reason);
-    return `<!-- Error occurred while processing content: ${err} -->`;
-  });
+  const fulfilled = fulfilledResults(results);
+  const hasUnknownContent = fulfilled.some((result) => result.unknown);
+  const hasFailedContent = fulfilled.some((result) => result.failed);
+  const assetManifestData = collectAssetManifestData(fulfilled);
+  const markdownContent = formatMarkdownContent(results);
 
   await writeFile(
     pathManager.asset(
@@ -133,11 +136,20 @@ export async function syncPost(
     assets: assetManifestData,
     id: post.id,
     restricted: false,
-    // false positive
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    status: hasUnknownContent || hasFailedContent ? "partial" : "complete",
+    status:
+      hasUnknownContent || hasFailedContent || hasRejectedContent
+        ? "partial"
+        : "complete",
     updatedDatetime: post.updatedDatetime,
   };
+}
+
+function collectAssetManifestData(
+  contents: ProcessedContent[],
+): Record<string, AssetManifestData> {
+  return Object.fromEntries(
+    contents.flatMap((content) => content.assets ?? []),
+  );
 }
 
 function formatCoverImage(post: Post): ImageContent {
@@ -153,12 +165,33 @@ function formatCoverImage(post: Post): ImageContent {
   });
 }
 
+function formatMarkdownContent(
+  results: PromiseSettledResult<ProcessedContent>[],
+): (string | undefined)[] {
+  return results.map((result) => {
+    if (result.status === "fulfilled") {
+      return result.value.markdown;
+    }
+
+    const err = String(result.reason);
+    return `<!-- Error occurred while processing content: ${err} -->`;
+  });
+}
+
 function formatMediaAsset(content: MediaContent, destination: string) {
   if (content instanceof ImageContent) {
     return formatImageAsset({ assetPath: destination });
   }
 
   return formatFileAsset({ assetPath: destination });
+}
+
+function fulfilledResults(
+  results: PromiseSettledResult<ProcessedContent>[],
+): ProcessedContent[] {
+  return results
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
 }
 
 function isMediaContent(
@@ -182,15 +215,38 @@ function mediaAssetSegments(content: MediaContent, indexPadded: string) {
   ];
 }
 
+async function processContent(
+  { headers, logger, pathManager, post, transport }: ProcessContentDeps,
+  { content, indexPadded }: ProcessContentOptions,
+): Promise<ProcessedContent> {
+  if (isMediaContent(content)) {
+    return syncMediaContent(
+      { headers, logger, pathManager, transport },
+      {
+        content,
+        fallbackDateTime: post.updatedDatetime,
+        indexPadded,
+      },
+    );
+  }
+
+  if (content instanceof TextContent) {
+    return { markdown: formatTextContent(content) };
+  }
+
+  logger.warn(
+    `Post ${post.id} has unhandled content type ${content.type}, skipping.`,
+  );
+  return { unknown: true };
+}
+
 async function syncMediaContent(
   {
-    assetManifestData,
     headers,
     logger,
     pathManager,
     transport,
   }: {
-    assetManifestData: Record<string, AssetManifestData>;
     headers?: Record<string, string>;
     logger: Logger;
     pathManager: PathManager;
@@ -210,35 +266,54 @@ async function syncMediaContent(
     mediaAssetSegments(content, indexPadded),
     content.extension,
   );
-  const { bytes, sha256 } = await downloadAsset(
+  const downloadResult: DownloadResult = await downloadAsset(
     { headers, logger, transport },
     {
       destination,
       fallbackDateTime,
       mediaContent: content,
     },
-  ).catch((err: unknown) => {
-    logger.error(
-      { err },
-      `Error occurred while downloading ${content.type} asset ${content.id}, skipping.`,
-    );
+  )
+    .then(({ bytes, sha256 }) => ({ bytes, failed: false, sha256 }) as const)
+    .catch((err: unknown) => {
+      logger.error(
+        { err },
+        `Error occurred while downloading ${content.type} asset ${content.id}, skipping.`,
+      );
 
-    assetManifestData[content.id] = {
-      path: destination,
-      status: "failed",
-      url: content.url,
-    };
+      return { error: err, failed: true } as const;
+    });
 
-    throw err;
-  });
+  if (downloadResult.failed) {
+    return {
+      assets: [
+        [
+          content.id,
+          {
+            path: destination,
+            status: "failed",
+            url: content.url,
+          },
+        ],
+      ],
+      failed: true,
+      markdown: `<!-- Error occurred while processing content: ${String(downloadResult.error)} -->`,
+    } satisfies ProcessedContent;
+  }
 
-  assetManifestData[content.id] = {
-    bytes,
-    path: destination,
-    sha256,
-    status: "complete",
-    url: content.url,
-  };
-
-  return formatMediaAsset(content, destination);
+  return {
+    assets: [
+      [
+        content.id,
+        {
+          bytes: downloadResult.bytes,
+          path: destination,
+          sha256: downloadResult.sha256,
+          status: "complete",
+          url: content.url,
+        },
+      ],
+    ],
+    markdown: formatMediaAsset(content, destination),
+  } satisfies ProcessedContent;
 }
