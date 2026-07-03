@@ -21,7 +21,6 @@ Auth:
   --cookie-file <path>      Read raw cookie or Netscape cookies.txt.
   --user-agent <value>      Send the User-Agent from your logged-in browser.
   FANBOX_SESSION_ID         Environment fallback.
-  FANBOX_USER_AGENT         User-Agent environment fallback.
 
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
