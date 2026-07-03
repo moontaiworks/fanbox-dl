@@ -1,3 +1,16 @@
+## [1.6.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.5...v1.6.0) (2026-07-03)
+
+### Features
+
+* add logs when complete ([1cf935e](https://github.com/moontaiworks/fanbox-dl/commit/1cf935e1e216ed36a219c501d935dabed3d9d55e))
+* add option to adjust filename byte limit and min preserve bytes for post title ([b6b3ea7](https://github.com/moontaiworks/fanbox-dl/commit/b6b3ea726020ea0e716ba171bbcff6270031f557))
+* ensure required part of name instead of length ([79e6021](https://github.com/moontaiworks/fanbox-dl/commit/79e602102a94fa6cfa0e93c3ee7e84c1c002a1cd))
+* truncate name if exceeds the length limit ([6a54228](https://github.com/moontaiworks/fanbox-dl/commit/6a542287bd7738ab1053d896d73cd2dd6eaf149e))
+
+### Bug Fixes
+
+* correct the amount of logged amounts of creator/post ([018b952](https://github.com/moontaiworks/fanbox-dl/commit/018b95283352fe3631dfe949fe8d284fe2e97d95))
+
 ## [1.5.5](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.4...v1.5.5) (2026-07-02)
 
 ### Bug Fixes
