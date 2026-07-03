@@ -18,6 +18,15 @@ export class CreatorManifestManager {
     this.#pathManager = pathManager;
   }
 
+  getFailedCreatorIds(): string[] {
+    const failed = new Set<string>();
+    for (const [creatorId, manifest] of this.#manifests) {
+      if (manifest.error || hasFailedPost(manifest)) failed.add(creatorId);
+    }
+
+    return [...failed];
+  }
+
   async load(creatorId: string): Promise<CreatorManifest> {
     const manifest =
       this.#manifests.get(creatorId) ?? this.#createManifest(creatorId);
@@ -25,6 +34,14 @@ export class CreatorManifestManager {
     await manifest.load();
 
     return manifest;
+  }
+
+  markFailed(creatorId: string, error: unknown): void {
+    this.#manifests.get(creatorId)!.markFailed(error);
+  }
+
+  markSucceeded(creatorId: string): void {
+    this.#manifests.get(creatorId)!.markSucceeded();
   }
 
   async saveAll(): Promise<void> {
@@ -45,4 +62,10 @@ export class CreatorManifestManager {
     this.#manifests.set(creatorId, manifest);
     return manifest;
   }
+}
+
+function hasFailedPost(manifest: CreatorManifest): boolean {
+  return Object.values(manifest.posts).some(
+    (post) => post?.status === "failed",
+  );
 }

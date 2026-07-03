@@ -14,6 +14,7 @@ export interface AssetManifestData {
 
 export interface CreatorManifestData {
   creatorId: string;
+  error?: string;
   posts: Partial<Record<string, PostManifestData>>;
   version: 1;
 }
@@ -39,6 +40,10 @@ type PostStatus = "complete" | "failed" | "partial" | "pending" | "skipped";
 
 export class CreatorManifest implements CreatorManifestData {
   readonly version = 1 as const;
+  get error() {
+    return this.#data.error;
+  }
+
   get posts() {
     return this.#data.posts;
   }
@@ -73,9 +78,20 @@ export class CreatorManifest implements CreatorManifestData {
     this.#data = data ?? { creatorId: this.creatorId, posts: {}, version: 1 };
   }
 
+  markFailed(error: unknown): void {
+    this.#data.error = String(error);
+  }
+
+  markSucceeded(): void {
+    delete this.#data.error;
+  }
+
   async save(): Promise<void> {
     const posts = Object.values(this.#data.posts);
-    if (!posts.length || posts.every((post) => post?.status !== "complete")) {
+    if (
+      !this.#data.error &&
+      (!posts.length || posts.every((post) => post?.status !== "complete"))
+    ) {
       // If there are no posts, we don't need to save the manifest.
       this.#logger.trace(
         `No posts in creator manifest for ${this.creatorId}, skipping save.`,

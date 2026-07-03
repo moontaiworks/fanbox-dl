@@ -9,7 +9,6 @@ import { resolveCreatorIds } from "./cli/resolver.js";
 import { syncCreator } from "./creator/sync.js";
 import { PathManager } from "./fs/path-manager.js";
 import { CreatorManifestManager } from "./manifest/creator-manager.js";
-import type { CreatorManifest } from "./manifest/creator.js";
 
 export interface RunCliDependencies {
   logger: Logger;
@@ -45,39 +44,36 @@ export async function download(
   });
   const client = new FanboxClient({ headers, transport });
 
-  const failed: string[] = [];
   const creatorIds = await resolveCreatorIds({ client, logger }, options);
   const creatorManifestManager = new CreatorManifestManager({
     logger,
     pathManager,
   });
-
   const processingCreators: Promise<void>[] = [];
 
   for (const creatorId of creatorIds) {
     logger.debug(`Initializing download for creator ${creatorId}`);
     const creatorManifest = await creatorManifestManager.load(creatorId);
-    const creatorPathManager = pathManager.dir([
-      { context: creatorId, required: true },
-    ]);
 
     const syncCreatorPromise = syncCreator({
       client,
       headers,
       logger,
       manifest: creatorManifest,
-      pathManager: creatorPathManager,
+      pathManager: pathManager.dir([{ context: creatorId, required: true }]),
       transport,
-    }).catch(() => {
-      logger.error(
-        `Error occurred while syncing creator ${creatorId}, skipping.`,
-      );
-      failed.push(creatorId);
-    });
+    })
+      .then(() => {
+        creatorManifestManager.markSucceeded(creatorId);
+      })
+      .catch((err: unknown) => {
+        logger.error(
+          { err },
+          `Error occurred while syncing creator ${creatorId}, skipping.`,
+        );
+        creatorManifestManager.markFailed(creatorId, err);
+      });
     processingCreators.push(syncCreatorPromise);
-
-    const success = !hasFailures(creatorManifest);
-    if (!success) failed.push(creatorId);
   }
 
   logger.info(
@@ -86,6 +82,7 @@ export async function download(
 
   await Promise.all(processingCreators);
   await creatorManifestManager.saveAll();
+  const failed = creatorManifestManager.getFailedCreatorIds();
 
   logger.info(
     { failed },
@@ -93,10 +90,4 @@ export async function download(
   );
 
   return failed;
-}
-
-function hasFailures(manifest: CreatorManifest): boolean {
-  return Object.values(manifest.posts).some(
-    (post) => post?.status === "failed",
-  );
 }
