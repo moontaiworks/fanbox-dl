@@ -178,6 +178,9 @@ export async function syncPost(
       hasUnknownContent = true;
     }),
   );
+  const hasFailedContent = results.some(
+    (result) => result.status === "rejected",
+  );
 
   const markdownContent = results.map((result) => {
     if (result.status === "fulfilled") {
@@ -205,7 +208,7 @@ export async function syncPost(
     restricted: false,
     // false positive
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    status: hasUnknownContent ? "partial" : "complete",
+    status: hasUnknownContent || hasFailedContent ? "partial" : "complete",
     updatedDatetime: post.updatedDatetime,
   };
 }
