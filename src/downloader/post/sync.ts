@@ -42,7 +42,8 @@ interface ProcessContentDeps extends SyncPostDeps {
 
 interface ProcessContentOptions {
   content: Content;
-  indexPadded: string;
+  index: number;
+  totalDigits: number;
 }
 
 interface ProcessedContent {
@@ -108,7 +109,7 @@ export async function syncPost(
     contents.map((content, index) =>
       processContent(
         { headers, logger, pathManager, post, transport },
-        { content, indexPadded: index.toString().padStart(totalDigits, "0") },
+        { content, index, totalDigits },
       ),
     ),
   );
@@ -200,7 +201,13 @@ function isMediaContent(
   return content instanceof FileContent || content instanceof ImageContent;
 }
 
-function mediaAssetSegments(content: MediaContent, indexPadded: string) {
+function mediaAssetSegments(
+  content: MediaContent,
+  index: number,
+  totalDigits: number,
+) {
+  const indexPadded = index.toString().padStart(totalDigits, "0");
+
   if (content instanceof FileContent) {
     return [
       { context: indexPadded, required: true },
@@ -217,7 +224,7 @@ function mediaAssetSegments(content: MediaContent, indexPadded: string) {
 
 async function processContent(
   { headers, logger, pathManager, post, transport }: ProcessContentDeps,
-  { content, indexPadded }: ProcessContentOptions,
+  { content, index, totalDigits }: ProcessContentOptions,
 ): Promise<ProcessedContent> {
   if (isMediaContent(content)) {
     return syncMediaContent(
@@ -225,7 +232,8 @@ async function processContent(
       {
         content,
         fallbackDateTime: post.updatedDatetime,
-        indexPadded,
+        index,
+        totalDigits,
       },
     );
   }
@@ -255,15 +263,17 @@ async function syncMediaContent(
   {
     content,
     fallbackDateTime,
-    indexPadded,
+    index,
+    totalDigits,
   }: {
     content: FileContent | ImageContent;
     fallbackDateTime: string;
-    indexPadded: string;
+    index: number;
+    totalDigits: number;
   },
 ) {
   const destination = pathManager.asset(
-    mediaAssetSegments(content, indexPadded),
+    mediaAssetSegments(content, index, totalDigits),
     content.extension,
   );
   const downloadResult: DownloadResult = await downloadAsset(
@@ -272,6 +282,7 @@ async function syncMediaContent(
       destination,
       fallbackDateTime,
       mediaContent: content,
+      timeOffset: index,
     },
   )
     .then(({ bytes, sha256 }) => ({ bytes, failed: false, sha256 }) as const)

@@ -1,4 +1,4 @@
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,6 +8,28 @@ import { syncPost } from "../../../src/downloader/post/sync.js";
 import type { HttpTransport } from "../../../src/transport/http2.js";
 
 describe("syncPost", () => {
+  it("offsets downloaded asset timestamps by their content index", async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), "fanbox-dl-sync-post-"));
+    const post = createImagePost({
+      images: [createImage("image-1"), createImage("image-2")],
+    });
+    const pathManager = new PathManager({ flatPosts: false, rootPath });
+
+    await syncPost(
+      {
+        logger: silentLogger,
+        pathManager,
+        transport: new SuccessfulAssetTransport(),
+      },
+      post,
+    );
+
+    const first = await stat(join(rootPath, "0-image-1.jpg"));
+    const second = await stat(join(rootPath, "1-image-2.jpg"));
+
+    expect(second.mtimeMs - first.mtimeMs).toBe(1_000);
+  });
+
   it("marks the post partial when an asset download fails", async () => {
     const rootPath = await mkdtemp(join(tmpdir(), "fanbox-dl-sync-post-"));
     const post = createImagePost();
@@ -34,6 +56,16 @@ class FailingAssetTransport implements HttpTransport {
   }
 }
 
+class SuccessfulAssetTransport implements HttpTransport {
+  fetch() {
+    return Promise.resolve(
+      new Response("asset", {
+        headers: { "Last-Modified": "Fri, 03 Jul 2026 00:00:00 GMT" },
+      }),
+    );
+  }
+}
+
 const silentLogger = {
   debug: vi.fn(),
   error: vi.fn(),
@@ -42,19 +74,25 @@ const silentLogger = {
   warn: vi.fn(),
 } as never;
 
-function createImagePost(): ImagePost {
+function createImage(id: string) {
+  return {
+    extension: "jpg",
+    height: 100,
+    id,
+    originalUrl: `https://downloads.example/${id}.jpg`,
+    thumbnailUrl: `https://downloads.example/${id}-thumbnail.jpg`,
+    width: 100,
+  };
+}
+
+function createImagePost({
+  images = [createImage("image-1")],
+}: {
+  images?: ImagePost["body"]["images"];
+} = {}): ImagePost {
   return {
     body: {
-      images: [
-        {
-          extension: "jpg",
-          height: 100,
-          id: "image-1",
-          originalUrl: "https://downloads.example/image-1.jpg",
-          thumbnailUrl: "https://downloads.example/image-1-thumbnail.jpg",
-          width: 100,
-        },
-      ],
+      images,
       text: "",
     },
     commentCount: 0,

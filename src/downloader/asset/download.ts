@@ -20,6 +20,7 @@ interface DownloadAssetOptions {
   destination: string;
   fallbackDateTime: string;
   mediaContent: MediaContent;
+  timeOffset: number;
 }
 
 class AssetDownloadError extends Error {
@@ -40,7 +41,12 @@ class AssetDownloadError extends Error {
 
 export async function downloadAsset(
   { headers = {}, logger, transport }: DownloadAssetDeps,
-  { destination, fallbackDateTime, mediaContent }: DownloadAssetOptions,
+  {
+    destination,
+    fallbackDateTime,
+    mediaContent,
+    timeOffset,
+  }: DownloadAssetOptions,
 ) {
   if (await exists(destination)) {
     logger.debug(`Asset ${mediaContent.id} already exists at ${destination}`);
@@ -81,7 +87,10 @@ export async function downloadAsset(
   await write(tempFilePath, response, downloadedBytes);
 
   const modified = response.headers.get("Last-Modified");
-  const timestamp = modified ? new Date(modified) : new Date(fallbackDateTime);
+  const timestamp = offsetTimestamp(
+    modified ? new Date(modified) : new Date(fallbackDateTime),
+    timeOffset,
+  );
   await utimes(tempFilePath, timestamp, timestamp);
 
   const [{ size: bytes }, sha256] = await Promise.all([
@@ -101,6 +110,10 @@ async function hashFile(filePath: string): Promise<string> {
     hash.update(chunk as Buffer);
 
   return hash.digest("hex");
+}
+
+function offsetTimestamp(timestamp: Date, timeOffset: number): Date {
+  return new Date(timestamp.getTime() + timeOffset * 1_000);
 }
 
 async function write(path: string, response: Response, partialBytes: number) {
