@@ -64,6 +64,17 @@ export function preSyncPostCheck(
   { logger, manifest }: PreSyncPostCheckDeps,
   postSummary: PostSummary,
 ): PostManifestData {
+  const existingPost = manifest.posts[postSummary.id];
+  if (
+    existingPost?.status === "complete" &&
+    postSummary.updatedDatetime === existingPost.updatedDatetime
+  ) {
+    // No changes since last download, skip
+    logger.debug(`Post ${postSummary.id} has no changes, skipping download.`);
+
+    return existingPost;
+  }
+
   if (postSummary.isRestricted) {
     // Not available for download, skip
     logger.debug(`Post ${postSummary.id} is restricted, skipping download.`);
@@ -74,15 +85,6 @@ export function preSyncPostCheck(
       status: "skipped",
       updatedDatetime: postSummary.updatedDatetime,
     };
-  }
-  const existingPost = manifest.posts[postSummary.id];
-  if (
-    existingPost?.status === "complete" &&
-    postSummary.updatedDatetime === existingPost.updatedDatetime
-  ) {
-    // No changes since last download, skip
-    logger.debug(`Post ${postSummary.id} has no changes, skipping download.`);
-    return existingPost;
   }
 
   return {
