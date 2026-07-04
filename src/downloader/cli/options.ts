@@ -28,6 +28,7 @@ Download:
   --max-filename-bytes <n>  Max filename bytes including .part temp suffix. Default: 256.
   --flat-parent-min-bytes <n>
                             Min optional parent/post name bytes to preserve in flat-posts filenames. Default: 35.
+  --verify                  Verify skipped complete posts against local files.
 
 Requests:
   --concurrency <n>         Concurrent requests. Default: 10.
@@ -58,6 +59,7 @@ export interface DownloadOptions {
   requestIntervalMs: number;
   supporting: boolean;
   userAgent?: string;
+  verify: boolean;
 }
 
 interface ParseDownloadOptionsDeps {
@@ -109,6 +111,7 @@ export function parseDownloadOptions(
     ),
     supporting: values.supporting,
     userAgent: values["user-agent"],
+    verify: values.verify,
   };
 }
 
@@ -163,6 +166,7 @@ function parseDownloadArgs(args: string[]) {
         "request-interval-ms": { default: "500", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },
+        verify: { default: false, type: "boolean" },
       },
       strict: true,
     });

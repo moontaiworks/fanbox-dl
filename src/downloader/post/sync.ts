@@ -20,11 +20,13 @@ import {
 import { FileContent, ImageContent, TextContent } from "./content.js";
 import type { Content, MediaContent } from "./content.js";
 import { formatPostContents } from "./contents.js";
+import { verifyCompletePost } from "./verify.js";
 
 type DownloadResult =
   | {
       bytes: number;
       failed: false;
+      modifiedTime: string;
       sha256: string;
     }
   | {
@@ -33,7 +35,8 @@ type DownloadResult =
     };
 interface PreSyncPostCheckDeps {
   logger: Logger;
-  manifest: CreatorManifest;
+  manifest: Pick<CreatorManifest, "posts">;
+  verify?: boolean;
 }
 
 interface ProcessContentDeps extends SyncPostDeps {
@@ -60,10 +63,10 @@ interface SyncPostDeps {
   transport: HttpTransport;
 }
 
-export function preSyncPostCheck(
-  { logger, manifest }: PreSyncPostCheckDeps,
+export async function preSyncPostCheck(
+  { logger, manifest, verify }: PreSyncPostCheckDeps,
   postSummary: PostSummary,
-): PostManifestData {
+): Promise<PostManifestData> {
   const existingPost = manifest.posts[postSummary.id];
   if (
     existingPost?.status === "complete" &&
@@ -71,6 +74,9 @@ export function preSyncPostCheck(
   ) {
     // No changes since last download, skip
     logger.debug(`Post ${postSummary.id} has no changes, skipping download.`);
+    if (verify) {
+      return verifyCompletePost({ logger }, existingPost, postSummary);
+    }
 
     return existingPost;
   }
@@ -287,7 +293,10 @@ async function syncMediaContent(
       timeOffset: index,
     },
   )
-    .then(({ bytes, sha256 }) => ({ bytes, failed: false, sha256 }) as const)
+    .then(
+      ({ bytes, modifiedTime, sha256 }) =>
+        ({ bytes, failed: false, modifiedTime, sha256 }) as const,
+    )
     .catch((err: unknown) => {
       logger.error(
         { err },
@@ -320,6 +329,8 @@ async function syncMediaContent(
         content.id,
         {
           bytes: downloadResult.bytes,
+          contentIndex: index,
+          expectedTime: downloadResult.modifiedTime,
           path: destination,
           sha256: downloadResult.sha256,
           status: "complete",

@@ -20,6 +20,7 @@ interface SyncCreatorDeps {
   manifest: CreatorManifest;
   pathManager: PathManager;
   transport: HttpTransport;
+  verify?: boolean;
 }
 
 export async function syncCreator({
@@ -29,6 +30,7 @@ export async function syncCreator({
   manifest,
   pathManager,
   transport,
+  verify = false,
 }: SyncCreatorDeps) {
   const postSummaries = await discoverCreatorPosts(
     { client, logger },
@@ -45,8 +47,15 @@ export async function syncCreator({
     logger.debug(
       `Initializing ${postIndex}/${postSummaries.length} post ${postSummary.id} for creator ${manifest.creatorId}`,
     );
-    const preCheckResult = preSyncPostCheck({ logger, manifest }, postSummary);
-    if (preCheckResult.status !== "pending") {
+    const preCheckResult = await preSyncPostCheck(
+      { logger, manifest, verify },
+      postSummary,
+    );
+
+    if (
+      preCheckResult.status === "complete" ||
+      preCheckResult.status === "skipped"
+    ) {
       manifest.posts[postSummary.id] = preCheckResult;
       continue;
     }

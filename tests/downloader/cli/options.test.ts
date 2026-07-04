@@ -60,6 +60,25 @@ describe("parseDownloadOptions", () => {
 
     expect(options.flatParentMinBytes).toBe(50);
   });
+
+  it("defaults verify to false", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+    ]);
+
+    expect(options.verify).toBe(false);
+  });
+
+  it("parses verify", () => {
+    const options = parseDownloadOptions({ logger: silentLogger }, [
+      "--creator",
+      "example",
+      "--verify",
+    ]);
+
+    expect(options.verify).toBe(true);
+  });
 });
 
 const silentLogger = {

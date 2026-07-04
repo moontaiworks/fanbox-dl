@@ -62,6 +62,7 @@ export async function download(
       manifest: creatorManifest,
       pathManager: pathManager.dir([{ context: creatorId, required: true }]),
       transport,
+      verify: options.verify,
     })
       .then(() => {
         creatorManifestManager.markSucceeded(creatorId);

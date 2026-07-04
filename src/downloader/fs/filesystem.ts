@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 
 export async function exists(filePath: string): Promise<boolean> {
@@ -18,8 +20,25 @@ export async function filesize(path: string) {
   });
 }
 
+export function formatFileTimestamp(timestamp: Date): string {
+  return normalizeFileTimestamp(timestamp).toISOString();
+}
+
+export async function hashFile(filePath: string): Promise<string> {
+  const hash = createHash("sha256");
+
+  for await (const chunk of createReadStream(filePath))
+    hash.update(chunk as Buffer);
+
+  return hash.digest("hex");
+}
+
 export function isNotFoundError(error: unknown): boolean {
   return isNodeError(error) && error.code === "ENOENT";
+}
+
+export function normalizeFileTimestamp(timestamp: Date): Date {
+  return new Date(Math.trunc(timestamp.getTime() / 1_000) * 1_000);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

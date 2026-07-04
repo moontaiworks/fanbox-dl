@@ -5,7 +5,9 @@ import { FileSystemStore, type Store } from "./store.js";
 
 export interface AssetManifestData {
   bytes?: number;
+  contentIndex?: number;
   error?: string;
+  expectedTime?: string;
   path: string;
   sha256?: string;
   status: AssetStatus;

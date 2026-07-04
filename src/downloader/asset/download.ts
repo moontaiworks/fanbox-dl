@@ -1,13 +1,17 @@
-import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, utimes } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, rename, stat, utimes } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
 import type { Logger } from "pino";
 
 import type { HttpTransport } from "../../transport/http2.js";
-import { exists, filesize } from "../fs/filesystem.js";
+import {
+  exists,
+  filesize,
+  formatFileTimestamp,
+  hashFile,
+} from "../fs/filesystem.js";
 import type { MediaContent } from "../post/content.js";
 
 interface DownloadAssetDeps {
@@ -50,12 +54,12 @@ export async function downloadAsset(
 ) {
   if (await exists(destination)) {
     logger.debug(`Asset ${mediaContent.id} already exists at ${destination}`);
-    const [{ size: bytes }, sha256] = await Promise.all([
-      filesize(destination),
+    const [{ mtime, size: bytes }, sha256] = await Promise.all([
+      stat(destination),
       hashFile(destination),
     ]);
 
-    return { bytes, sha256 };
+    return { bytes, modifiedTime: formatFileTimestamp(mtime), sha256 };
   }
 
   logger.debug(
@@ -99,17 +103,9 @@ export async function downloadAsset(
   ]);
 
   await rename(tempFilePath, destination);
+  const { mtime } = await stat(destination);
 
-  return { bytes, sha256 };
-}
-
-async function hashFile(filePath: string): Promise<string> {
-  const hash = createHash("sha256");
-
-  for await (const chunk of createReadStream(filePath))
-    hash.update(chunk as Buffer);
-
-  return hash.digest("hex");
+  return { bytes, modifiedTime: formatFileTimestamp(mtime), sha256 };
 }
 
 function offsetTimestamp(timestamp: Date, timeOffset: number): Date {

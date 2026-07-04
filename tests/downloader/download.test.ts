@@ -91,6 +91,7 @@ function createDownloadOptions(
     output: options.output,
     requestIntervalMs: 0,
     supporting: false,
+    verify: false,
   };
 }
 
