@@ -1,3 +1,20 @@
+## [1.7.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.6.0...v1.7.0) (2026-07-04)
+
+### Features
+
+* add verify option to check completeness of downloaded posts ([f34db93](https://github.com/moontaiworks/fanbox-dl/commit/f34db93d3df744d982bd1eed56b250c50a49eead))
+* offset file time by index to preserve order even sort by time ([417f94e](https://github.com/moontaiworks/fanbox-dl/commit/417f94eaef9a34e24d69f539d618e2028b303106))
+
+### Bug Fixes
+
+* correct status report for final execution result ([f3ef139](https://github.com/moontaiworks/fanbox-dl/commit/f3ef139bd936de606b999060857aef7c68a841a4))
+* correctly report failed creators after sync completes ([33456ef](https://github.com/moontaiworks/fanbox-dl/commit/33456ef4747597b27a2470f3c8da993c44a47792))
+* ensure last post exists when fetching creator posts ([5e1f325](https://github.com/moontaiworks/fanbox-dl/commit/5e1f325021843f9e8f3b09b5710f206159c4a225))
+* honor actual post complete check logics ([7b8023f](https://github.com/moontaiworks/fanbox-dl/commit/7b8023fd2f6b5faed94eacd4320259a613b4643b))
+* honor post index logging in syncCreator function ([3c1d02c](https://github.com/moontaiworks/fanbox-dl/commit/3c1d02c970866a8dfa5b2549139d1dc03f2d65c1))
+* mark partial success if failed ([446d4aa](https://github.com/moontaiworks/fanbox-dl/commit/446d4aab357720ead4e7f9d192ec92a1a108f065))
+* only ignore missing filesystem paths ([36e9ed6](https://github.com/moontaiworks/fanbox-dl/commit/36e9ed682a14baec4089a7fa4270a702dd2cbac9))
+
 ## [1.6.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.5.5...v1.6.0) (2026-07-03)
 
 ### Features
