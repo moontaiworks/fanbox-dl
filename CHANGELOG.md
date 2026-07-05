@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.7.0...v1.7.1) (2026-07-05)
+
+### Bug Fixes
+
+* force use file offset for time ([e03ba4e](https://github.com/moontaiworks/fanbox-dl/commit/e03ba4e8d71add679e75e05c6eaec11a6f7769f8))
+
 ## [1.7.0](https://github.com/moontaiworks/fanbox-dl/compare/v1.6.0...v1.7.0) (2026-07-04)
 
 ### Features
