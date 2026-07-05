@@ -25,7 +25,7 @@ Auth:
 Download:
   --output <path>           Output directory. Default: fanbox-downloads.
   --flat-posts              Store post files directly under each creator.
-  --max-filename-bytes <n>  Max filename bytes including .part temp suffix. Default: 256.
+  --max-filename-bytes <n>  Max filename bytes including .part temp suffix. Default: 255.
   --flat-parent-min-bytes <n>
                             Min optional parent/post name bytes to preserve in flat-posts filenames. Default: 35.
   --verify                  Verify skipped complete posts against local files.
@@ -159,7 +159,7 @@ function parseDownloadArgs(args: string[]) {
         "http2-session-multiplier": { default: "10", type: "string" },
         "ignore-creator": { multiple: true, type: "string" },
         "log-level": { default: "info", type: "string" },
-        "max-filename-bytes": { default: "256", type: "string" },
+        "max-filename-bytes": { default: "255", type: "string" },
         "max-retries": { default: "3", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
         "rate-limit-pause-ms": { type: "string" },

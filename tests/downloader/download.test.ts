@@ -86,7 +86,7 @@ function createDownloadOptions(
     following: false,
     http2SessionMultiplier: 10,
     ignoreCreatorIds: [],
-    maxFilenameBytes: 256,
+    maxFilenameBytes: 255,
     maxRetries: 0,
     output: options.output,
     requestIntervalMs: 0,

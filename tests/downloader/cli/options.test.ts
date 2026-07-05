@@ -21,13 +21,13 @@ describe("parseDownloadOptions", () => {
     expect(options.http2SessionMultiplier).toBe(3);
   });
 
-  it("defaults max filename bytes to 256", () => {
+  it("defaults max filename bytes to 255", () => {
     const options = parseDownloadOptions({ logger: silentLogger }, [
       "--creator",
       "example",
     ]);
 
-    expect(options.maxFilenameBytes).toBe(256);
+    expect(options.maxFilenameBytes).toBe(255);
   });
 
   it("defaults flat parent min bytes to 35", () => {

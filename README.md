@@ -69,7 +69,7 @@ At least one creator selector is required: `--creator`, `--following`, or
 | `--user-agent <value>`           | Send the same User-Agent as the browser session that produced your cookie.                                 | `--user-agent "Mozilla/5.0 ..."` | random string       |
 | `--output <path>`                | Directory where downloaded creators and posts are stored.                                                  | `--output ./fanbox-downloads`    | `fanbox-downloads`  |
 | `--flat-posts`                   | Store post files directly under each creator directory instead of one directory per post.                  | `--flat-posts`                   | `false`             |
-| `--max-filename-bytes <n>`       | Maximum filename byte length, including the `.part` temporary suffix.                                      | `--max-filename-bytes 200`       | `256`               |
+| `--max-filename-bytes <n>`       | Maximum filename byte length, including the `.part` temporary suffix.                                      | `--max-filename-bytes 200`       | `255`               |
 | `--flat-parent-min-bytes <n>`    | Minimum optional parent/post-title bytes to preserve in `--flat-posts` filenames.                          | `--flat-parent-min-bytes 50`     | `35`                |
 | `--concurrency <n>`              | Maximum number of concurrent requests. Must be greater than `0`.                                           | `--concurrency 10`               | `10`                |
 | `--http2-session-multiplier <n>` | Multiplier used with concurrency to set HTTP/2 sessions per origin. Must be greater than `0`.              | `--http2-session-multiplier 10`  | `10`                |
