@@ -7,7 +7,6 @@ export interface AssetManifestData {
   bytes?: number;
   contentIndex?: number;
   error?: string;
-  expectedTime?: string;
   path: string;
   sha256?: string;
   status: AssetStatus;

@@ -7,6 +7,7 @@ import type { Logger } from "pino";
 
 import type { HttpTransport } from "../../transport/http2.js";
 import {
+  discardMilliseconds,
   exists,
   filesize,
   formatFileTimestamp,
@@ -22,8 +23,8 @@ interface DownloadAssetDeps {
 
 interface DownloadAssetOptions {
   destination: string;
-  fallbackDateTime: string;
   mediaContent: MediaContent;
+  publishedDatetime: string;
   timeOffset: number;
 }
 
@@ -47,8 +48,8 @@ export async function downloadAsset(
   { headers = {}, logger, transport }: DownloadAssetDeps,
   {
     destination,
-    fallbackDateTime,
     mediaContent,
+    publishedDatetime,
     timeOffset,
   }: DownloadAssetOptions,
 ) {
@@ -90,10 +91,8 @@ export async function downloadAsset(
 
   await write(tempFilePath, response, downloadedBytes);
 
-  const modified = response.headers.get("Last-Modified");
-  const timestamp = offsetTimestamp(
-    modified ? new Date(modified) : new Date(fallbackDateTime),
-    timeOffset,
+  const timestamp = discardMilliseconds(
+    new Date(new Date(publishedDatetime).getTime() + timeOffset * 1_000),
   );
   await utimes(tempFilePath, timestamp, timestamp);
 
@@ -106,10 +105,6 @@ export async function downloadAsset(
   const { mtime } = await stat(destination);
 
   return { bytes, modifiedTime: formatFileTimestamp(mtime), sha256 };
-}
-
-function offsetTimestamp(timestamp: Date, timeOffset: number): Date {
-  return new Date(timestamp.getTime() + timeOffset * 1_000);
 }
 
 async function write(path: string, response: Response, partialBytes: number) {

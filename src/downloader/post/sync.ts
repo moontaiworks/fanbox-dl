@@ -239,8 +239,8 @@ async function processContent(
       { headers, logger, pathManager, transport },
       {
         content,
-        fallbackDateTime: post.updatedDatetime,
         index,
+        publishedDatetime: post.publishedDatetime,
         totalDigits,
       },
     );
@@ -270,13 +270,13 @@ async function syncMediaContent(
   },
   {
     content,
-    fallbackDateTime,
     index,
+    publishedDatetime,
     totalDigits,
   }: {
     content: FileContent | ImageContent;
-    fallbackDateTime: string;
     index: number;
+    publishedDatetime: string;
     totalDigits: number;
   },
 ) {
@@ -288,8 +288,8 @@ async function syncMediaContent(
     { headers, logger, transport },
     {
       destination,
-      fallbackDateTime,
       mediaContent: content,
+      publishedDatetime,
       timeOffset: index,
     },
   )
@@ -330,7 +330,6 @@ async function syncMediaContent(
         {
           bytes: downloadResult.bytes,
           contentIndex: index,
-          expectedTime: downloadResult.modifiedTime,
           path: destination,
           sha256: downloadResult.sha256,
           status: "complete",

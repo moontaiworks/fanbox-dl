@@ -77,7 +77,6 @@ describe("syncPost", () => {
               "image-1": {
                 bytes: 5,
                 contentIndex: 0,
-                expectedTime: "2026-07-03T00:00:00.000Z",
                 path: destination,
                 sha256:
                   "d59386e0ae435e292fbe0ebcdb954b75ed5fb3922091277cb19f798fc5d50718",
@@ -94,7 +93,7 @@ describe("syncPost", () => {
       const repaired = await stat(destination);
 
       expect(result.status).toBe("complete");
-      expect(repaired.mtime.toISOString()).toBe("2026-07-03T00:00:00.000Z");
+      expect(repaired.mtime.toISOString()).toBe("2026-07-02T15:00:00.000Z");
     });
 
     it("marks complete assets failed when verify finds a hash mismatch", async () => {
@@ -110,7 +109,6 @@ describe("syncPost", () => {
               "image-1": {
                 bytes: 5,
                 contentIndex: 0,
-                expectedTime: "2026-07-03T00:00:00.000Z",
                 path: destination,
                 sha256:
                   "a3a6bf43aebbb02d55e6ba061dc496c6e06bb35b79e1cc102d5c4b82628e1df8",
@@ -131,44 +129,6 @@ describe("syncPost", () => {
       });
     });
 
-    it("normalizes verified asset timestamps to second precision", async () => {
-      const rootPath = await mkdtemp(join(tmpdir(), "fanbox-dl-sync-post-"));
-      const destination = join(rootPath, "0-image-1.jpg");
-      await writeFile(destination, "asset");
-      await utimes(
-        destination,
-        new Date("2026-07-03T00:00:00Z"),
-        new Date("2026-07-03T00:00:00Z"),
-      );
-
-      const result = await preSyncPostCheck(
-        {
-          logger: silentLogger,
-          manifest: createManifest({
-            assets: {
-              "image-1": {
-                bytes: 5,
-                contentIndex: 0,
-                expectedTime: "2026-07-03T00:00:00.500Z",
-                path: destination,
-                sha256:
-                  "d59386e0ae435e292fbe0ebcdb954b75ed5fb3922091277cb19f798fc5d50718",
-                status: "complete",
-                url: "https://downloads.example/image-1.jpg",
-              },
-            },
-          }),
-          verify: true,
-        },
-        createPostSummary(),
-      );
-
-      expect(result.assets["image-1"]).toMatchObject({
-        expectedTime: "2026-07-03T00:00:00.000Z",
-        status: "complete",
-      });
-    });
-
     it("marks complete assets obsolete when verify cannot determine their content index", async () => {
       const rootPath = await mkdtemp(join(tmpdir(), "fanbox-dl-sync-post-"));
       const destination = join(rootPath, "0-image-1.jpg");
@@ -181,7 +141,6 @@ describe("syncPost", () => {
             assets: {
               "image-1": {
                 bytes: 5,
-                expectedTime: "2026-07-03T00:00:00.000Z",
                 path: destination,
                 sha256:
                   "d59386e0ae435e292fbe0ebcdb954b75ed5fb3922091277cb19f798fc5d50718",

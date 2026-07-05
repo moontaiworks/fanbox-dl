@@ -3,12 +3,7 @@ import { stat, utimes } from "node:fs/promises";
 import type { Logger } from "pino";
 
 import type { PostSummary } from "../../client/types.js";
-import {
-  exists,
-  formatFileTimestamp,
-  hashFile,
-  normalizeFileTimestamp,
-} from "../fs/filesystem.js";
+import { discardMilliseconds, exists, hashFile } from "../fs/filesystem.js";
 import type {
   AssetManifestData,
   PostManifestData,
@@ -43,23 +38,6 @@ export async function verifyCompletePost(
     assets,
     status: hasFailedAsset ? "partial" : "complete",
   };
-}
-
-function expectedModifiedTime(
-  asset: AssetManifestData,
-  postSummary: PostSummary,
-): Date {
-  if (asset.expectedTime) {
-    const modifiedTime = normalizeFileTimestamp(new Date(asset.expectedTime));
-    if (!Number.isNaN(modifiedTime.getTime())) return modifiedTime;
-  }
-
-  return normalizeFileTimestamp(
-    new Date(
-      new Date(postSummary.updatedDatetime).getTime() +
-        asset.contentIndex! * 1_000,
-    ),
-  );
 }
 
 function failedAsset(
@@ -106,11 +84,15 @@ async function verifyAsset(
     return failedAsset(asset, "sha256 mismatch");
   }
 
-  const expectedTime = expectedModifiedTime(asset, postSummary);
+  const expectedTime = discardMilliseconds(
+    new Date(
+      new Date(postSummary.publishedDatetime).getTime() +
+        asset.contentIndex * 1_000,
+    ),
+  );
   const { mtimeMs } = await stat(asset.path);
   if (
-    normalizeFileTimestamp(new Date(mtimeMs)).getTime() !==
-    expectedTime.getTime()
+    discardMilliseconds(new Date(mtimeMs)).getTime() !== expectedTime.getTime()
   ) {
     logger.debug(
       `Repairing modified time of verified asset ${asset.path} from ${new Date(mtimeMs).toISOString()} to ${expectedTime.toISOString()}`,
@@ -118,5 +100,5 @@ async function verifyAsset(
     await utimes(asset.path, expectedTime, expectedTime);
   }
 
-  return { ...asset, expectedTime: formatFileTimestamp(expectedTime) };
+  return { ...asset };
 }
