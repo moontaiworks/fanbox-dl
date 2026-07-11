@@ -43,6 +43,7 @@
     "url": "git+https://github.com/moontaiworks/fanbox-dl.git"
   },
   "scripts": {
+    "dev": "npx -y tsx watch src/cli.ts",
     "build": "pnpm run build:bundle && pnpm run build:native",
     "build:bundle": "tsup",
     "build:native": "pnpm run build:native:esm && pnpm run build:native:cjs",
