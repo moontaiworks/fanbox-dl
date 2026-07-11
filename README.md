@@ -13,12 +13,12 @@ Run the downloader through your package manager, install it globally, or use
 the published Docker image:
 
 ```bash
-npx @moontaiworks/fanbox-dl download --help
+npx @moontaiworks/fanbox-dl creators --help
 ```
 
 ```bash
 npm install -g @moontaiworks/fanbox-dl
-fanbox-dl download --help
+fanbox-dl creators --help
 ```
 
 ```bash
@@ -40,7 +40,7 @@ docker run --rm \
 Authenticated downloads read `FANBOX_SESSION_ID` by default:
 
 ```bash
-FANBOX_SESSION_ID=your-session-id npx @moontaiworks/fanbox-dl download \
+FANBOX_SESSION_ID=your-session-id npx @moontaiworks/fanbox-dl creators \
   --supporting \
   --output ./fanbox-downloads
 ```
@@ -48,7 +48,7 @@ FANBOX_SESSION_ID=your-session-id npx @moontaiworks/fanbox-dl download \
 You can also pass a cookie file exported from your logged-in browser session:
 
 ```bash
-npx @moontaiworks/fanbox-dl download \
+npx @moontaiworks/fanbox-dl creators \
   --creator creator-id \
   --cookie-file ./cookies.txt
 ```

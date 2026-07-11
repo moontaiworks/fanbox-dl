@@ -2,9 +2,9 @@ import type { Logger } from "pino";
 
 import { FanboxClient } from "../client/client.js";
 import { createFanboxRequestHeaders } from "../client/fanbox-headers.js";
+import type { DownloadCreatorsOptions } from "../commands/creators/options.js";
 import type { HttpTransport } from "../transport/http2.js";
 import { RequestWorker } from "../transport/worker.js";
-import type { DownloadOptions } from "./cli/options.js";
 import { resolveCreatorIds } from "./cli/resolver.js";
 import { syncCreator } from "./creator/sync.js";
 import { PathManager } from "./fs/path-manager.js";
@@ -17,7 +17,7 @@ export interface RunCliDependencies {
 
 export async function download(
   { logger, transport: customTransport }: RunCliDependencies,
-  options: DownloadOptions,
+  options: DownloadCreatorsOptions,
 ) {
   logger.debug({ options }, "Starting download with options");
   const headers = createFanboxRequestHeaders({

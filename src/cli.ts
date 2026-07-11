@@ -5,7 +5,8 @@ import { parseArgs } from "node:util";
 import type { LevelWithSilent, Logger } from "pino";
 import { pino } from "pino";
 
-import * as Downloader from "./downloader/cli/index.js";
+import { GLOBAL_CLI_OPTIONS } from "./cli/options.js";
+import * as HandleCreators from "./commands/creators/index.js";
 import { CliUsageError } from "./usage.js";
 
 interface Command {
@@ -14,7 +15,7 @@ interface Command {
 }
 
 const commands: Partial<Record<string, Command>> = {
-  download: Downloader,
+  creators: HandleCreators,
 };
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -35,8 +36,8 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0);
 }
 
-const { "log-level": logLevel = "info" } = parseArgs({
-  options: { "log-level": { type: "string" } },
+const { "log-level": logLevel } = parseArgs({
+  options: GLOBAL_CLI_OPTIONS,
   strict: false,
 }).values;
 function isLogLevel(level: unknown): level is LevelWithSilent {

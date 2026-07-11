@@ -1,8 +1,8 @@
-import { parseDownloadOptions } from "../../../src/downloader/cli/options.js";
+import { parseDownloadCreatorsOptions } from "../../../src/commands/creators/options.js";
 
-describe("parseDownloadOptions", () => {
+describe("parseDownloadCreatorsOptions", () => {
   it("defaults HTTP/2 session multiplier to 10", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
     ]);
@@ -11,7 +11,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("parses the configured HTTP/2 session multiplier", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
       "--http2-session-multiplier",
@@ -22,7 +22,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("defaults max filename bytes to 255", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
     ]);
@@ -31,7 +31,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("defaults flat parent min bytes to 35", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
     ]);
@@ -40,7 +40,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("parses the configured max filename bytes", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
       "--max-filename-bytes",
@@ -51,7 +51,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("parses the configured flat parent min bytes", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
       "--flat-parent-min-bytes",
@@ -62,7 +62,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("defaults verify to false", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
     ]);
@@ -71,7 +71,7 @@ describe("parseDownloadOptions", () => {
   });
 
   it("parses verify", () => {
-    const options = parseDownloadOptions({ logger: silentLogger }, [
+    const options = parseDownloadCreatorsOptions({ logger: silentLogger }, [
       "--creator",
       "example",
       "--verify",
