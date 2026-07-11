@@ -31,6 +31,7 @@ export default defineConfig({
     teardownTimeout: 60000,
     testTimeout: 60000,
     typecheck: {
+      enabled: true,
       tsconfig: "./tests/tsconfig.json",
     },
   },
