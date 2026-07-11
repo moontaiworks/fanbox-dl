@@ -73,7 +73,7 @@ At least one creator selector is required: `--creator`, `--following`, or
 | `--flat-parent-min-bytes <n>`    | Minimum optional parent/post-title bytes to preserve in `--flat-posts` filenames.                          | `--flat-parent-min-bytes 50`     | `35`                |
 | `--concurrency <n>`              | Maximum number of concurrent requests. Must be greater than `0`.                                           | `--concurrency 10`               | `10`                |
 | `--http2-session-multiplier <n>` | Multiplier used with concurrency to set HTTP/2 sessions per origin. Must be greater than `0`.              | `--http2-session-multiplier 10`  | `10`                |
-| `--request-interval-ms <n>`      | Delay between request starts, in milliseconds.                                                             | `--request-interval-ms 1000`     | `500`               |
+| `--request-interval-ms <n>`      | Delay between request starts, in milliseconds.                                                             | `--request-interval-ms 1000`     | `1000`              |
 | `--rate-limit-pause-ms <n>`      | Pause duration after HTTP 429. When omitted, `Retry-After` can be honored by the transport.                | `--rate-limit-pause-ms 60000`    | None                |
 | `--max-retries <n>`              | Retry attempts for retryable request failures.                                                             | `--max-retries 3`                | `3`                 |
 | `--log-level <level>`            | Show logs at this level or higher. One of `fatal`, `error`, `warn`, `info`, `debug`, `trace`, or `silent`. | `--log-level trace`              | `info`              |

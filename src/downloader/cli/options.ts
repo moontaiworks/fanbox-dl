@@ -34,7 +34,7 @@ Requests:
   --concurrency <n>         Concurrent requests. Default: 10.
   --http2-session-multiplier <n>
                             HTTP/2 sessions per origin multiplier based on concurrency. Default: 10.
-  --request-interval-ms <n> Delay between request starts. Default: 500.
+  --request-interval-ms <n> Delay between request starts. Default: 1000.
   --rate-limit-pause-ms <n> Force overwrite pause ms when 429.
   --max-retries <n>         Retry attempts. Default: 3.
 
@@ -163,7 +163,7 @@ function parseDownloadArgs(args: string[]) {
         "max-retries": { default: "3", type: "string" },
         output: { default: "fanbox-downloads", type: "string" },
         "rate-limit-pause-ms": { type: "string" },
-        "request-interval-ms": { default: "500", type: "string" },
+        "request-interval-ms": { default: "1000", type: "string" },
         supporting: { default: false, type: "boolean" },
         "user-agent": { type: "string" },
         verify: { default: false, type: "boolean" },
