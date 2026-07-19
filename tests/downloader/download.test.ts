@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import type { PostSummary } from "../../src/client/types.js";
 import type { DownloadOptions } from "../../src/downloader/cli/options.js";
-import { download } from "../../src/downloader/index.js";
+import { download } from "../../src/commands/creators/download.js";
 import type { HttpTransport } from "../../src/transport/http2.js";
 
 describe("download", () => {

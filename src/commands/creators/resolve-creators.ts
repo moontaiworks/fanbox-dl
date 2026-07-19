@@ -1,20 +1,20 @@
 import type { Logger } from "pino";
 
-export interface CreatorResolverClient {
+interface CreatorResolverClient {
   listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
   listSupportingPlans(): Promise<{ creatorId: string }[]>;
-}
-
-export interface ResolveCreatorIdsOptions {
-  creatorIds: string[];
-  following: boolean;
-  ignoreCreatorIds: string[];
-  supporting: boolean;
 }
 
 interface ResolveCreatorIdsDeps {
   client: CreatorResolverClient;
   logger: Logger;
+}
+
+interface ResolveCreatorIdsOptions {
+  creatorIds: string[];
+  following: boolean;
+  ignoreCreatorIds: string[];
+  supporting: boolean;
 }
 
 export async function resolveCreatorIds(

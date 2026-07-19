@@ -97,6 +97,7 @@
     "vitest": "^4.1.0"
   },
   "dependencies": {
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "tls-client-node": "0.2.0"
   }
 }

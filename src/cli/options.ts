@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 
 import type { Logger } from "pino";
 
-import { normalizeCookie } from "../downloader/cli/cookie.js";
 import { CliUsageError } from "../usage.js";
+import { normalizeCookie } from "./cookie.js";
 
 export const COMMON_CLI_OPTIONS = {
   concurrency: { default: "10", type: "string" },
