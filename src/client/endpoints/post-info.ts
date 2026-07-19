@@ -5,7 +5,9 @@ export interface GetPostParams {
   postId: string;
 }
 
-export type GetPostResult = Post;
+export interface GetPostResult {
+  post: Post;
+}
 
 /**
  * Get detailed information about a specific post.

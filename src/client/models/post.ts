@@ -47,6 +47,10 @@ export interface PostCover {
   url: string;
 }
 
+export interface PostItem {
+  post: PostSummary;
+}
+
 export interface PostListParams {
   limit?: number;
   maxId?: string;
@@ -54,7 +58,6 @@ export interface PostListParams {
 }
 
 export type PostSort = "newest" | "oldest";
-
 export interface PostSummary {
   commentCount: number;
   cover: null | PostCover;

@@ -66,6 +66,7 @@ export async function syncCreator({
     const postPathManager = pathManager.post(postSummary);
     const post = await client
       .getPost({ postId: postSummary.id })
+      .then((result) => result.post)
       .catch(async (err: unknown) => {
         logger.error(
           { err },
