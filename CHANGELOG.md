@@ -1,3 +1,9 @@
+## [1.7.2](https://github.com/moontaiworks/fanbox-dl/compare/v1.7.1...v1.7.2) (2026-07-19)
+
+### Bug Fixes
+
+* update due to response data format changed ([5394e20](https://github.com/moontaiworks/fanbox-dl/commit/5394e2015a84cebef6bc14930273bb0da4a557ad))
+
 ## [1.7.1](https://github.com/moontaiworks/fanbox-dl/compare/v1.7.0...v1.7.1) (2026-07-05)
 
 ### Bug Fixes
