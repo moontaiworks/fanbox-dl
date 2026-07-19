@@ -2,7 +2,7 @@ import type { Logger } from "pino";
 
 export interface CreatorResolverClient {
   listFollowingCreators(): Promise<{ creators: { creatorId: string }[] }>;
-  listSupportingPlans(): Promise<{ creatorId: string }[]>;
+  listSupportingPlans(): Promise<{ plans: { creatorId: string }[] }>;
 }
 
 export interface ResolveCreatorIdsOptions {
@@ -36,7 +36,7 @@ export async function resolveCreatorIds(
   }
 
   if (options.supporting) {
-    const plans = await client.listSupportingPlans();
+    const { plans } = await client.listSupportingPlans();
     logger.trace(
       { plans: plans.map((p) => p.creatorId) },
       `Retrieved ${plans.length} supporting plans`,

@@ -1,7 +1,9 @@
 import type { FanboxClient } from "../client.js";
 import type { SupportingPlan } from "../models/plan.js";
 
-export type ListSupportingPlansResult = SupportingPlan[];
+export interface ListSupportingPlansResult {
+  plans: SupportingPlan[];
+}
 
 /**
  * List plans that the authenticated user is supporting.
